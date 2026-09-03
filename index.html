@@ -464,7 +464,7 @@
 </main>
 
 <div class="foot">
-  原型预览版 · 数据仅保存在本浏览器 localStorage · <button id="btnReset">重置为示例数据</button>
+  数据仅保存在本机 · <button id="btnReset" data-i18n="resetAll">清空全部数据</button>
 </div>
 
 <!-- Modal: 新建任务 -->
@@ -803,6 +803,10 @@ function seed(){
   tasks.forEach(t => { if (t.source === 'canvas' && !t.originalDue) t.originalDue = new Date(t.due.getTime()); });
   return { courses, tasks };
 }
+/* 全新安装 / 清空后的初始状态：无任务、无课程 */
+function emptyState(){
+  return { tasks: [], courses: [] };
+}
 
 let state = null;
 function loadState(){
@@ -826,7 +830,7 @@ function save(){
   lsSet('ddl-state', JSON.stringify(persist));
 }
 function initState(){
-  state = loadState() || seed();
+  state = loadState() || emptyState();
   normalize();
   save();
 }
@@ -1899,9 +1903,9 @@ function bind(){
   });
 
   $('#btnReset').addEventListener('click', () => {
-    if (confirm('确定重置为示例数据？当前本地数据会被覆盖。')){
-      state = seed(); normalize(); save(); refreshCourseOptions(); renderAllViews();
-    }
+    openConfirm(t('resetAllMsg'), () => {
+      state = emptyState(); normalize(); save(); refreshCourseOptions(); renderAllViews();
+    });
   });
 }
 
@@ -2372,6 +2376,11 @@ Object.assign(I18N['zh-TW'], { addCourse:'＋ 新增課程', newCoursePh:'新課
 Object.assign(I18N['ja'], { addCourse:'＋ 科目を追加', newCoursePh:'新しい科目名', delCourseMsg:'科目「{name}」を削除しますか？{n} 件のタスクは未分類になります。', tlLimitLabel:'タイムライン表示件数', tlAll:'すべて' });
 Object.assign(I18N['en'], { addCourse:'＋ Add course', newCoursePh:'New course / project name', delCourseMsg:'Delete course “{name}”? {n} task(s) will become uncategorized.', tlLimitLabel:'Timeline shows', tlAll:'All' });
 Object.assign(I18N['es'], { addCourse:'＋ Añadir curso', newCoursePh:'Nuevo curso / proyecto', delCourseMsg:'¿Eliminar el curso «{name}»? {n} tareas quedarán sin categoría.', tlLimitLabel:'Mostrar en la línea de tiempo', tlAll:'Todo' });
+Object.assign(I18N['zh-CN'], { resetAll:'清空全部数据', resetAllMsg:'确定清空全部任务和课程吗？此操作无法撤销。' });
+Object.assign(I18N['zh-TW'], { resetAll:'清空全部資料', resetAllMsg:'確定清空全部任務與課程嗎？此操作無法復原。' });
+Object.assign(I18N['ja'], { resetAll:'すべてのデータを消去', resetAllMsg:'すべてのタスクと科目を削除しますか？元に戻せません。' });
+Object.assign(I18N['en'], { resetAll:'Clear all data', resetAllMsg:'Clear all tasks and courses? This cannot be undone.' });
+Object.assign(I18N['es'], { resetAll:'Borrar todos los datos', resetAllMsg:'¿Borrar todas las tareas y cursos? Esta acción no se puede deshacer.' });
 let LANG = 'zh-CN';
 function t(key){
   const d = I18N[LANG] || I18N['zh-CN'];

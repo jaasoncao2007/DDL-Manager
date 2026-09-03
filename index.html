@@ -3,6 +3,11 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="DDL Manager">
+<meta name="theme-color" content="#fbfcfe">
 <title>DDL Manager</title>
 <style>
   :root{
@@ -266,6 +271,36 @@
   .done-item .acts button{border:1px solid var(--line); background:#fff; border-radius:7px; font-size:10.5px; padding:3px 7px; cursor:pointer; color:#5b6474; text-decoration:none;}
   .done-item .acts button:hover{border-color:#16a34a; color:#15803d;}
   @media (max-width:980px){ .all-cols{grid-template-columns:1fr;} .all-done{min-height:0;} }
+  /* 手机 / 窄屏适配 */
+  @media (max-width:760px){
+    header.topbar{padding:10px 12px 14px; border-radius:0 0 18px 18px; flex-wrap:wrap; gap:8px;}
+    .head-left{gap:8px;}
+    .brand{font-size:16px; gap:7px;}
+    .brand .app-ico{width:20px; height:20px;}
+    .clockchip{font-size:10.5px;}
+    .actions{gap:6px;}
+    .actions .btn{padding:6px 10px; font-size:12px;}
+    main{padding:8px 10px 90px;}
+    .section-title{font-size:16px;}
+    .chips{flex-wrap:wrap;}
+    .chip{flex:1 1 46%; min-width:150px;}
+    .tabs{max-width:100%; overflow-x:auto; white-space:nowrap; -webkit-overflow-scrolling:touch;}
+    .tabs .tab{flex:none;}
+    .grid{grid-template-columns:1fr;}
+    .row2{grid-template-columns:1fr;}
+    .all-cols{grid-template-columns:1fr;}
+    .tl-bar{flex-direction:column; align-items:stretch;}
+    .zoom{flex-wrap:wrap; justify-content:flex-start;}
+    .overlay{padding:3vh 10px;}
+    .modal{max-width:100% !important;}
+    .filters{flex-wrap:wrap;}
+    .filters select,.filters input{flex:1 1 100%;}
+    .import-row{flex-wrap:wrap;}
+    .import-row input{flex:1 1 100%;}
+    .table-wrap{margin:0;}
+    .cards-search input{font-size:16px;}   /* 避免 iOS 聚焦缩放 */
+    .filters input,.filters select,.field input,.field select{font-size:16px;}
+  }
   .filters{display:flex; gap:8px; margin-bottom:12px; flex-wrap:wrap;}
   .pager{display:flex; gap:6px; align-items:center; justify-content:flex-end; margin-top:12px;}
   .pgb{min-width:30px; height:30px; padding:0 8px; border:1px solid var(--line); background:var(--card); color:#3f4756; border-radius:8px; font-size:13px; font-weight:700; cursor:pointer;}

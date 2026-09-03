@@ -5,3 +5,5 @@ dist/
 *.dmg
 *.app
 node_modules/
+
+dist-windows/

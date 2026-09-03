@@ -1929,8 +1929,8 @@ function bind(){
         importMsg('❌ 未能从该链接抓取到日历', 'warn');
       } else {
         $('#demoNote').style.display = 'block';
-        $('#demoNote').innerHTML = `浏览器原型受跨域限制，无法直接请求 <b>${escapeHtml(url.split('/')[2] || 'Canvas 域名')}</b>。<br>请使用打包后的 <b>桌面版</b>（可真实联网抓取），或在下方直接 <b>粘贴 / 上传 .ics 文件</b> 导入。`;
-        importMsg('⚠️ 浏览器无法跨域抓取该 Feed', 'warn');
+        $('#demoNote').innerHTML = `抓取失败：<b>${escapeHtml(e && e.message ? e.message : String(e))}</b><br>网页版通过 Supabase 云端函数转发抓取；请确认 <b>fetch-ics</b> 函数已部署、且链接域名在允许列表内。也可以直接在下方 <b>粘贴 / 上传 .ics 文件</b> 导入。`;
+        importMsg('⚠️ 未能抓取该 Feed（网页版需先部署 fetch-ics 转发函数）', 'warn');
       }
     }
   });
@@ -2077,9 +2077,12 @@ function showDueNotifications(force){
 
 /* ================= Canvas Feed 自动刷新 ================= */
 let feedTimer = null, feedNextAt = 0;
+/* 网页版跨域转发：你自己的 Supabase 项目（anon 公钥可公开内嵌） */
+const SB_URL = 'https://bjymopyldecqtyerqfxh.supabase.co';
+const SB_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJqeW1vcHlsZGVjcXR5ZXJxZnhoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg0NjI0NjIsImV4cCI6MjEwNDAzODQ2Mn0.AG1ijIxe5QIWSJusqANE-hmHBG7YfVkuklP91A5ONmU';
 
 // 抓取 Feed 文本：桌面版（Tauri）走 Rust 原生抓取（无跨域限制）；
-// 浏览器原型退回 fetch()，跨域被拦时会给出提示。
+// 浏览器/网页版：先试直连，被 CORS 拦下后走 Supabase 云端转发函数 fetch-ics。
 async function httpGetText(url){
   let u = String(url || '').trim().replace(/^webcal:\/\//i, 'https://');
   if (!/^https?:\/\//i.test(u)) throw new Error('链接格式不正确');
@@ -2089,9 +2092,28 @@ async function httpGetText(url){
       if (typeof txt === 'string' && txt) return txt;
     }
   } catch(e){ /* 回退到 fetch */ }
-  const r = await fetch(u, { mode: 'cors', redirect: 'follow' });
-  if (!r.ok) throw new Error('HTTP ' + r.status);
-  return await r.text();
+  try {
+    const r = await fetch(u, { mode: 'cors', redirect: 'follow' });
+    if (r.ok){
+      const t = await r.text();
+      if (/BEGIN:VCALENDAR/i.test(t)) return t;
+    }
+  } catch(e){ /* CORS → 走转发 */ }
+  if (SB_URL && SB_ANON){
+    const resp = await fetch(SB_URL + '/functions/v1/fetch-ics', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + SB_ANON,
+        'apikey': SB_ANON
+      },
+      body: JSON.stringify({ url: u })
+    });
+    const j = await resp.json().catch(() => ({}));
+    if (j && j.ok && j.text) return j.text;
+    throw new Error((j && j.error) || ('转发失败 HTTP ' + resp.status));
+  }
+  throw new Error('浏览器跨域限制（且未配置转发函数）');
 }
 
 // 合并：新增未收录的；Canvas 改期则更新时间（手动改过的不覆盖，保留 🖊 已编辑）

@@ -335,6 +335,10 @@
   .cf-chip i{width:8px; height:8px; border-radius:50%; flex:none;}
   .cf-chip.on{background:var(--brand); border-color:var(--brand); color:#fff;}
   .cf-chip.on i{box-shadow:0 0 0 1px rgba(255,255,255,.65);}
+  .cards-search{margin:0 0 10px;}
+  .cards-search input{width:100%; box-sizing:border-box; border:1px solid var(--line); border-radius:10px;
+    padding:8px 12px; font-size:13px; font-family:inherit; background:var(--card); color:var(--ink);}
+  .cards-search input:focus{outline:none; border-color:var(--brand); box-shadow:0 0 0 3px var(--brand-soft);}
   .foot{text-align:center; color:#98a1b3; font-size:12px; margin-top:26px;}
   .foot button{border:none; background:none; color:var(--brand); cursor:pointer; font-size:12px; text-decoration:underline;}
   ::-webkit-scrollbar{height:9px; width:9px;}
@@ -373,6 +377,7 @@
 
   <section class="view active" id="view-soon">
     <div class="section-title" data-i18n="titleCards">任务卡</div>
+    <div class="cards-search"><input type="text" id="searchSoon" data-i18n-ph="searchCards" placeholder="🔍 搜索任务卡…"></div>
     <div id="soonGrid"></div>
   </section>
 
@@ -950,7 +955,18 @@ function cardHtml(task){
 function renderSoon(){
   const now = new Date();
   const weekEnd = new Date(mondayOf(now).getTime() + WEEK);
-  const opens = state.tasks.filter(t => t.status !== 'done');
+  const q = ($('#searchSoon') ? $('#searchSoon').value : '').trim().toLowerCase();
+  const hasAnyOpen = state.tasks.some(t => t.status !== 'done');
+  let opens = state.tasks.filter(t => t.status !== 'done');
+  if (q){
+    opens = opens.filter(t => {
+      const c = courseOf(t.courseId) || { name: '' };
+      return (t.title || '').toLowerCase().includes(q)
+        || (c.name || '').toLowerCase().includes(q)
+        || (t.type || '').toLowerCase().includes(q)
+        || (t.notes || '').toLowerCase().includes(q);
+    });
+  }
   const groups = [
     { key:'over',  name: t('gOver'),  dot:'#b91c1c', test: x => x.due < now },
     { key:'d3',    name: t('g3'),  dot:'#ea580c', test: x => x.due >= now && x.due < new Date(now.getTime() + 3*DAY) },
@@ -973,7 +989,11 @@ function renderSoon(){
     </div>`;
   });
   if (!opens.length && !only){
-    $('#soonGrid').innerHTML = `<div class="empty"><div class="big">🎉</div>太棒了，当前没有未完成任务！<br><br><button class="btn primary" onclick="document.getElementById('btnAdd').click()">＋ 新建第一个任务</button></div>`;
+    if (q && hasAnyOpen){
+      $('#soonGrid').innerHTML = `<div class="empty"><div class="big">🔍</div>${t('notFound')}</div>`;
+    } else {
+      $('#soonGrid').innerHTML = `<div class="empty"><div class="big">🎉</div>太棒了，当前没有未完成任务！<br><br><button class="btn primary" onclick="document.getElementById('btnAdd').click()">＋ 新建第一个任务</button></div>`;
+    }
     return;
   }
   if (only && !added) html += `<div class="empty"><div class="big">🌤</div>该分组暂时没有任务</div>`;
@@ -1902,6 +1922,8 @@ function bind(){
     renderAllViews();
   });
 
+  const soonSearch = $('#searchSoon');
+  if (soonSearch) soonSearch.addEventListener('input', () => { soonOnly = null; renderSoon(); });
   $('#btnReset').addEventListener('click', () => {
     openConfirm(t('resetAllMsg'), () => {
       state = emptyState(); normalize(); save(); refreshCourseOptions(); renderAllViews();
@@ -2381,6 +2403,11 @@ Object.assign(I18N['zh-TW'], { resetAll:'清空全部資料', resetAllMsg:'確�
 Object.assign(I18N['ja'], { resetAll:'すべてのデータを消去', resetAllMsg:'すべてのタスクと科目を削除しますか？元に戻せません。' });
 Object.assign(I18N['en'], { resetAll:'Clear all data', resetAllMsg:'Clear all tasks and courses? This cannot be undone.' });
 Object.assign(I18N['es'], { resetAll:'Borrar todos los datos', resetAllMsg:'¿Borrar todas las tareas y cursos? Esta acción no se puede deshacer.' });
+Object.assign(I18N['zh-CN'], { searchCards:'🔍 搜索任务卡（标题 / 课程 / 类型 / 备注）…', notFound:'未找到相关任务' });
+Object.assign(I18N['zh-TW'], { searchCards:'🔍 搜尋任務卡（標題 / 課程 / 類型 / 備註）…', notFound:'未找到相關任務' });
+Object.assign(I18N['ja'], { searchCards:'🔍 タスクを検索（タイトル / 科目 / タグ / メモ）…', notFound:'該当するタスクが見つかりません' });
+Object.assign(I18N['en'], { searchCards:'🔍 Search cards (title / course / tag / notes)…', notFound:'No matching tasks found' });
+Object.assign(I18N['es'], { searchCards:'🔍 Buscar tarjetas (título / curso / etiqueta / notas)…', notFound:'No se encontraron tareas' });
 let LANG = 'zh-CN';
 function t(key){
   const d = I18N[LANG] || I18N['zh-CN'];

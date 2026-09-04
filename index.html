@@ -422,7 +422,7 @@
       <div class="zoom">
         <span class="nav">
           <button class="btn small" id="tlPrev" title="向过去滑动一屏">‹</button>
-          <button class="btn small" id="tlToday" title="回到今天">今天</button>
+          <button class="btn small" id="tlToday" data-i18n="btnToday" title="回到今天">今天</button>
           <button class="btn small" id="tlNext" title="向未来滑动一屏">›</button>
         </span>
         <i class="lg-div" style="height:18px"></i>
@@ -771,11 +771,14 @@ const batchSel = new Set();  // 全部任务页批量选中的任务 id
 
 
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
-const fmtDate = d => `${d.getFullYear()}/${pad(d.getMonth()+1)}/${pad(d.getDate())} ${WD[d.getDay()]} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+const fmtDate = d => `${d.getFullYear()}/${pad(d.getMonth()+1)}/${pad(d.getDate())} ${weekdayShort(d)} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
 const fmtShort = d => `${d.getMonth()+1}/${d.getDate()}`;
 const fmtLocalInput = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 const mondayOf = d => { const x = new Date(d); x.setHours(0,0,0,0); const off = (x.getDay()+6)%7; x.setDate(x.getDate()-off); return x; };
 const hoursUntil = d => (d - Date.now()) / 36e5;
+const LOCALE_OF = { 'zh-CN':'zh-CN', 'zh-TW':'zh-TW', ja:'ja-JP', en:'en-US', es:'es-ES' };
+const loc = () => LOCALE_OF[LANG] || 'zh-CN';
+const weekdayShort = d => new Intl.DateTimeFormat(loc(), { weekday:'short' }).format(d);
 
 function urgencyClass(h){
   if (h <= 0) return 'over';
@@ -796,7 +799,8 @@ const countdownText = d => {
   const diff = d - Date.now();
   const abs = Math.abs(diff);
   const dd = Math.floor(abs / DAY), hh = Math.floor((abs % DAY) / 36e5);
-  return diff < 0 ? `已逾期 ${dd} 天 ${hh} 小时` : `还剩 ${dd} 天 ${hh} 小时`;
+  const s = diff < 0 ? t('cdOver') : t('cdLeft');
+  return s.replace('{d}', dd).replace('{h}', hh);
 };
 function taskCompare(a, b, now){
   const oa = a.due < now, ob = b.due < now;
@@ -1026,13 +1030,16 @@ function renderSoon(){
   if (!opens.length && !only){
     if (q && hasAnyOpen){
       $('#soonGrid').innerHTML = `<div class="empty"><div class="big">🔍</div>${t('notFound')}</div>`;
+      localizeDom();
     } else {
       $('#soonGrid').innerHTML = `<div class="empty"><div class="big">🎉</div>太棒了，当前没有未完成任务！<br><br><button class="btn primary" onclick="document.getElementById('btnAdd').click()">＋ 新建第一个任务</button></div>`;
+      localizeDom();
     }
     return;
   }
-  if (only && !added) html += `<div class="empty"><div class="big">🌤</div>该分组暂时没有任务</div>`;
+  if (only && !added) html += `<div class="empty"><div class="big">🌤</div>${t('grpEmpty')}</div>`;
   $('#soonGrid').innerHTML = html;
+  localizeDom();
 }
 function clearSoonFilter(){ soonOnly = null; renderSoon(); }
 /* FLIP：让其余卡片从旧位置平滑滑到新位置补位 */
@@ -1096,9 +1103,10 @@ function renderAll(){
   const body = $('#allBody');
   const pager = $('#pager');
   if (!rows.length){
-    body.innerHTML = '<tr><td colspan="10" style="text-align:center;color:#98a1b3;padding:28px">没有符合条件的任务</td></tr>';
+    body.innerHTML = '<tr><td colspan="10" style="text-align:center;color:#98a1b3;padding:28px">' + t('noRows') + '</td></tr>';
     if (pager) pager.innerHTML = '';
     updateBatchBar();
+    localizeDom();
     return;
   }
   body.innerHTML = slice.map(task => {
@@ -1129,6 +1137,7 @@ function renderAll(){
   ph += `<button class="pgb" data-pg="next"${listPage === pagerMax ? ' disabled' : ''}>›</button>`;
   if (pager) pager.innerHTML = ph;
   updateBatchBar();
+  localizeDom();
 }
 
 /* ================= 时间轴（长时间轴 + 原生横向滚动） ================= */
@@ -1141,6 +1150,7 @@ const ZOOMS = [
 ];
 let zi = 2;                              // 默认 1周
 const zlevel = () => ZOOMS[zi];
+const zlabel = z => String(z.label).replace(/^(\d+)(天|周)$/, (m, n, u) => n + (u === '天' ? t('unDay') : t('unWeek')));
 const PAST_WEEKS = 2;                    // 时间轴起点：本周往前补 2 周
 const startOfDay = d => { const x = new Date(d); x.setHours(0,0,0,0); return x; };
 const DAY_CN = ['日','一','二','三','四','五','六'];
@@ -1181,10 +1191,10 @@ function renderTimeline(){
       const ap = hh < 12 ? 'am' : 'pm';
       weeksHtml += `<div class="wk ${cls.join(' ')} hcell" data-idx="${i}" style="left:${i*colPx}px;width:${colPx}px"><div class="d">${h12}:00</div><div class="r">${ap}</div></div>`;
     } else if (z.unit === 'day'){
-      weeksHtml += `<div class="wk ${cls.join(' ')}" data-idx="${i}" style="left:${i*colPx}px;width:${colPx}px"><div class="d">周${DAY_CN[d.getDay()]}</div><div class="r">${fmtShort(d)}</div></div>`;
+      weeksHtml += `<div class="wk ${cls.join(' ')}" data-idx="${i}" style="left:${i*colPx}px;width:${colPx}px"><div class="d">${weekdayShort(d)}</div><div class="r">${fmtShort(d)}</div></div>`;
     } else {
       const wn = Math.round((d - semStart) / (7 * DAY)) + 1;
-      const rTxt = wn >= 1 ? (wn === 1 ? '本周' : `第 ${wn} 周`) : `${1 - wn} 周前`;
+      const rTxt = wn >= 1 ? (wn === 1 ? t('wkThis') : t('wkN').replace('{n}', wn)) : t('wkAgo').replace('{n}', 1 - wn);
       weeksHtml += `<div class="wk ${cls.join(' ')}" data-idx="${i}" style="left:${i*colPx}px;width:${colPx}px"><div class="d">${fmtShort(d)}</div><div class="r">${rTxt}</div></div>`;
     }
   }
@@ -1206,6 +1216,7 @@ function renderTimeline(){
   const lanes = $('#tlLanes');
   if (!rows.length){
     lanes.innerHTML = `<div class="lane"><div class="tl-row"><div class="tl-gutter"></div><div class="lane-canvas" style="display:flex;align-items:center;justify-content:center;background:none;width:${contentW}px">暂无任务，去右上角新建吧</div></div></div>`;
+    localizeDom();
     return;
   }
   const todayX = Math.max(0, Math.min(contentW, x(now.getTime())));
@@ -1236,6 +1247,7 @@ function renderTimeline(){
       </div>
     </div>`;
   }).join('');
+  localizeDom();
 }
 
 function setZoomLevel(n){
@@ -1268,9 +1280,11 @@ function centerOnToday(smooth){
 }
 function zoomSpanText(z){
   const kind = z.unit === 'hour' ? t('kindHour') : (z.unit === 'day' ? t('kindDay') : t('kindWeek'));
-  return `${z.label} · ${kind} · ${t('nativeScroll')}`;
+  return `${zlabel(z)} · ${kind} · ${t('nativeScroll')}`;
 }
 function updateZoomUI(){
+  const seg = $('#zoomSeg');
+  if (seg) seg.innerHTML = ZOOMS.map((z, idx) => `<button data-z="${idx}" class="${idx === zi ? 'active' : ''}">${zlabel(z)}</button>`).join('');
   document.querySelectorAll('#zoomSeg button').forEach(b => b.classList.toggle('active', +b.dataset.z === zi));
   $('#zoomVal').textContent = zoomSpanText(zlevel());
   const tb = $('#tlToday');
@@ -1278,7 +1292,7 @@ function updateZoomUI(){
 }
 function initZoomSeg(){
   const seg = $('#zoomSeg');
-  seg.innerHTML = ZOOMS.map((z, idx) => `<button data-z="${idx}" class="${idx === zi ? 'active' : ''}">${z.label}</button>`).join('');
+  seg.innerHTML = ZOOMS.map((z, idx) => `<button data-z="${idx}" class="${idx === zi ? 'active' : ''}">${zlabel(z)}</button>`).join('');
   seg.addEventListener('click', e => {
     const b = e.target.closest('button[data-z]');
     if (b) setZoomLevel(+b.dataset.z);
@@ -1307,6 +1321,7 @@ function refreshCourseOptions(){
 }
 function renderAllViews(){
   renderChips(); renderSoon(); renderAll(); renderDonePage(); renderTimeline();
+  localizeDom();
 }
 function renderDonePage(){
   const total = state.tasks.filter(t => t.status === 'done');
@@ -1349,6 +1364,7 @@ function renderDonePage(){
   nums.forEach(n => { if (n - last > 1) ph += '<span class="pgdots">…</span>'; ph += `<button class="pgb${n === donePage ? ' on' : ''}" data-pg="${n}">${n}</button>`; last = n; });
   ph += `<button class="pgb" data-pg="next"${donePage === donePagerMax ? ' disabled' : ''}>›</button>`;
   if (pagerD) pagerD.innerHTML = ph;
+  localizeDom();
 }
 function escapeHtml(s){
   return String(s == null ? '' : s).replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
@@ -1477,7 +1493,13 @@ function addEventsAsTasks(events){
   return { added, skipped };
 }
 function importMsg(html, kind){
-  $('#importMsg').innerHTML = `<div class="note ${kind}">${html}</div>`;
+  $('#importMsg').innerHTML = `<div class="note ${kind}">${trText(html)}</div>`;
+}
+function feedResultText(r){
+  let s = t('impAdd').replace('{n}', r.added) + ' · ' + t('impUpd').replace('{n}', r.updated);
+  if (r.kept) s += ' · ' + t('impKeep').replace('{n}', r.kept);
+  if (r.skipped) s += ' · ' + t('impSkip').replace('{n}', r.skipped);
+  return s;
 }
 
 /* 示例 ICS：时间跟随“今天”动态生成（模拟 Canvas 日历 Feed） */
@@ -1531,6 +1553,7 @@ function openCourses(){
       <button class="delc" data-del title="删除课程">✕</button>
     </div>`;
   }).join('');
+  localizeDom();
   openOv('#ovCourses');
 }
 function openDdl(id){
@@ -1921,7 +1944,7 @@ function bind(){
       const r = mergeCanvasEvents(evs);
       save();
       refreshCourseOptions(); updateTypeList(); renderAllViews(); updateFeedSyncState();
-      importMsg(`✅ Canvas Feed 同步完成：新增 <b>${r.added}</b> 个 · 时间更新 <b>${r.updated}</b> 个${r.kept ? ` · 保留手动修改 ${r.kept} 个` : ''}${r.skipped ? ` · 跳过 ${r.skipped} 个` : ''}`, 'ok');
+      importMsg(t('feedSyncOkTitle') + '：' + feedResultText(r), 'ok');
     } catch(e){
       if (inTauri){
         $('#demoNote').style.display = 'block';
@@ -1941,7 +1964,7 @@ function bind(){
     const reader = new FileReader();
     reader.onload = () => {
       const r = addEventsAsTasks(parseICS(reader.result));
-      importMsg(`✅ 解析 <b>${f.name}</b>：新增 <b>${r.added}</b> 个作业${r.skipped ? `，跳过 ${r.skipped} 个（重复/无时间）` : ''}`, 'ok');
+      importMsg('✅ ' + t('impParsedFile').replace('{f}', f.name).replace('{n}', r.added) + (r.skipped ? ' · ' + t('impSkip').replace('{n}', r.skipped) : ''), 'ok');
       renderAllViews();
     };
     reader.readAsText(f);
@@ -1953,7 +1976,7 @@ function bind(){
     const evs = parseICS(txt);
     if (!evs.length){ importMsg('⚠️ 没有解析到 VEVENT，请检查内容是否为 .ics 格式', 'warn'); return; }
     const r = addEventsAsTasks(evs);
-    importMsg(`✅ 解析完成：新增 <b>${r.added}</b> 个作业${r.skipped ? `，跳过 ${r.skipped} 个（重复/无截止时间）` : ''}`, 'ok');
+    importMsg('✅ ' + t('impParsed').replace('{n}', r.added) + (r.skipped ? ' · ' + t('impSkip').replace('{n}', r.skipped) : ''), 'ok');
     renderAllViews();
   });
 
@@ -2047,7 +2070,7 @@ function showToast(title, text, kind){
   if (!box) return;
   const el = document.createElement('div');
   el.className = 'toast ' + (kind || '');
-  el.innerHTML = `<h4>${escapeHtml(title)}</h4>${text ? `<p>${escapeHtml(text)}</p>` : ''}`;
+  el.innerHTML = `<h4>${escapeHtml(trText(title))}</h4>${text ? `<p>${escapeHtml(trText(text))}</p>` : ''}`;
   box.appendChild(el);
   const kill = () => { if (!el.parentNode) return; el.classList.add('hide'); setTimeout(() => el.remove(), 260); };
   el.addEventListener('click', kill);
@@ -2055,7 +2078,7 @@ function showToast(title, text, kind){
 }
 function leadLabel(){
   const h = account.leadHours;
-  return h >= 24 ? '1 天' : h >= 12 ? '12 小时' : h >= 6 ? '6 小时' : '1 小时';
+  return h >= 24 ? t('ld1') : h >= 12 ? t('ld12') : h >= 6 ? t('ld6') : t('ld1h');
 }
 function dueNotices(){
   const now = Date.now(), lead = account.leadHours * 36e5;
@@ -2064,14 +2087,14 @@ function dueNotices(){
 function showDueNotifications(force){
   if (!account.notify) return;
   const list = dueNotices().filter(t => force || !notified.has(t.id));
-  if (!list.length && force){ showToast('✅ 暂无即将截止的任务', '目前没有剩余不足 ' + leadLabel() + ' 的任务', 'ok'); return; }
+  if (!list.length && force){ showToast(t('noDueTitle'), t('noDueMsg').replace('{lead}', leadLabel()), 'ok'); return; }
   list.forEach(t => {
     notified.add(t.id);
-    const c = courseOf(t.courseId) || { name:'任务' };
+    const c = courseOf(t.courseId) || { name:'' };
     const hh = Math.max(0.1, Math.round((t.due - Date.now()) / 36e5 * 10) / 10);
-    const msg = `「${t.title}」（${c.name}）还剩约 ${hh} 小时`;
-    if (account.webCh) showToast('⏰ 网页内提醒', msg, 'warn');
-    if (account.emailCh) showToast('✉️ 邮件提醒（演示）', msg, 'ok');
+    const msg = t('remMsg').replace('{t}', t.title).replace('{c}', c.name).replace('{h}', hh);
+    if (account.webCh) showToast(t('webRemTitle'), msg, 'warn');
+    if (account.emailCh) showToast(t('emailRemTitle'), msg, 'ok');
   });
 }
 
@@ -2197,7 +2220,7 @@ async function refreshCanvasFeed(manual){
   saveAccount();
   refreshCourseOptions(); updateTypeList(); renderAllViews();
   updateFeedSyncState();
-  showToast('⇩ Canvas Feed 自动刷新完成', `新增 ${r.added} 个 · 时间更新 ${r.updated} 个${r.kept ? ' · 保留手动修改 ' + r.kept + ' 个' : ''}`, 'ok');
+  showToast(t('feedSyncOkTitle'), feedResultText(r), 'ok');
 }
 
 function scheduleFeed(){
@@ -2220,6 +2243,7 @@ function updateFeedSyncState(){
   if (account.feedLastErr) parts.push('上次失败');
   if (account.autoRefresh && account.feedUrl && feedNextAt) parts.push('下次刷新：' + new Date(feedNextAt).toLocaleTimeString());
   el.innerHTML = parts.join(' &nbsp;·&nbsp; ');
+  localizeDom();
 }
 
 /* ================= 顶栏实时时钟（跟随设备时区/定位） ================= */
@@ -2465,10 +2489,135 @@ Object.assign(I18N['zh-TW'], { searchCards:'🔍 搜尋任務卡（標題 / 課�
 Object.assign(I18N['ja'], { searchCards:'🔍 タスクを検索（タイトル / 科目 / タグ / メモ）…', notFound:'該当するタスクが見つかりません' });
 Object.assign(I18N['en'], { searchCards:'🔍 Search cards (title / course / tag / notes)…', notFound:'No matching tasks found' });
 Object.assign(I18N['es'], { searchCards:'🔍 Buscar tarjetas (título / curso / etiqueta / notas)…', notFound:'No se encontraron tareas' });
+Object.assign(I18N['zh-CN'], { cdOver:'已逾期 {d} 天 {h} 小时', cdLeft:'还剩 {d} 天 {h} 小时', btnToday:'今天', unDay:'天', unWeek:'周', wkThis:'本周', wkN:'第 {n} 周', wkAgo:'{n} 周前' });
+Object.assign(I18N['zh-TW'], { cdOver:'已逾期 {d} 天 {h} 小時', cdLeft:'還剩 {d} 天 {h} 小時', btnToday:'今天', unDay:'天', unWeek:'週', wkThis:'本週', wkN:'第 {n} 週', wkAgo:'{n} 週前' });
+Object.assign(I18N['ja'], { cdOver:'期限超過 {d} 日 {h} 時間', cdLeft:'残り {d} 日 {h} 時間', btnToday:'今日', unDay:'日', unWeek:'週', wkThis:'今週', wkN:'{n} 週目', wkAgo:'{n} 週前' });
+Object.assign(I18N['en'], { cdOver:'Overdue {d}d {h}h', cdLeft:'{d}d {h}h left', btnToday:'Today', unDay:'d', unWeek:'wk', wkThis:'This week', wkN:'Week {n}', wkAgo:'{n} wk ago' });
+Object.assign(I18N['es'], { cdOver:'Atrasado {d}d {h}h', cdLeft:'Quedan {d}d {h}h', btnToday:'Hoy', unDay:'d', unWeek:'sem', wkThis:'Esta semana', wkN:'Semana {n}', wkAgo:'Hace {n} sem' });
+Object.assign(I18N['zh-CN'], { noRows:'没有符合条件的任务', grpEmpty:'该分组暂时没有任务' });
+Object.assign(I18N['zh-TW'], { noRows:'沒有符合條件的任務', grpEmpty:'該分組暫時沒有任務' });
+Object.assign(I18N['ja'], { noRows:'該当するタスクがありません', grpEmpty:'このグループにはタスクがありません' });
+Object.assign(I18N['en'], { noRows:'No matching tasks', grpEmpty:'No tasks in this group yet' });
+Object.assign(I18N['es'], { noRows:'No hay tareas que coincidan', grpEmpty:'Aún no hay tareas en este grupo' });
+Object.assign(I18N['zh-CN'], { feedSyncOkTitle:'✅ Canvas Feed 同步完成', impParsed:'解析完成：新增 {n} 个作业', impParsedFile:'解析 {f}：新增 {n} 个作业', impAdd:'新增 {n} 个', impUpd:'时间更新 {n} 个', impKeep:'保留手动修改 {n} 个', impSkip:'跳过 {n} 个' });
+Object.assign(I18N['zh-TW'], { feedSyncOkTitle:'✅ Canvas Feed 同步完成', impParsed:'解析完成：新增 {n} 個作業', impParsedFile:'解析 {f}：新增 {n} 個作業', impAdd:'新增 {n} 個', impUpd:'時間更新 {n} 個', impKeep:'保留手動修改 {n} 個', impSkip:'跳過 {n} 個' });
+Object.assign(I18N['ja'], { feedSyncOkTitle:'✅ Canvas Feed 同期完了', impParsed:'解析完了：{n} 件のタスクを追加', impParsedFile:'{f} 解析：{n} 件のタスクを追加', impAdd:'{n} 件を追加', impUpd:'{n} 件を更新', impKeep:'手動編集 {n} 件を保持', impSkip:'{n} 件をスキップ' });
+Object.assign(I18N['en'], { feedSyncOkTitle:'✅ Canvas Feed synced', impParsed:'Parsed: {n} task(s) added', impParsedFile:'Parsed {f}: {n} task(s) added', impAdd:'{n} added', impUpd:'{n} updated', impKeep:'{n} kept (manual edits)', impSkip:'{n} skipped' });
+Object.assign(I18N['es'], { feedSyncOkTitle:'✅ Feed de Canvas sincronizado', impParsed:'Procesado: {n} tareas añadidas', impParsedFile:'Procesado {f}: {n} tareas añadidas', impAdd:'{n} añadidas', impUpd:'{n} actualizadas', impKeep:'{n} conservadas (edición manual)', impSkip:'{n} omitidas' });
+Object.assign(I18N['zh-CN'], { ld1:'1 天', ld12:'12 小时', ld6:'6 小时', ld1h:'1 小时', noDueTitle:'✅ 暂无即将截止的任务', noDueMsg:'目前没有剩余不足 {lead} 的任务', webRemTitle:'⏰ 网页内提醒', emailRemTitle:'✉️ 邮件提醒（演示）', remMsg:'「{t}」（{c}）还剩约 {h} 小时' });
+Object.assign(I18N['zh-TW'], { ld1:'1 天', ld12:'12 小時', ld6:'6 小時', ld1h:'1 小時', noDueTitle:'✅ 暫無即將截止的任務', noDueMsg:'目前沒有剩餘不足 {lead} 的任務', webRemTitle:'⏰ 網頁內提醒', emailRemTitle:'✉️ 郵件提醒（演示）', remMsg:'「{t}」（{c}）還剩約 {h} 小時' });
+Object.assign(I18N['ja'], { ld1:'1日', ld12:'12時間', ld6:'6時間', ld1h:'1時間', noDueTitle:'✅ まもなく締切のタスクはありません', noDueMsg:'残り {lead} 未満のタスクはありません', webRemTitle:'⏰ アプリ内通知', emailRemTitle:'✉️ メール通知（デモ）', remMsg:'「{t}」（{c}）残り約 {h} 時間' });
+Object.assign(I18N['en'], { ld1:'1 day', ld12:'12 hours', ld6:'6 hours', ld1h:'1 hour', noDueTitle:'✅ No tasks due soon', noDueMsg:'No tasks with less than {lead} remaining', webRemTitle:'⏰ In-app reminder', emailRemTitle:'✉️ Email reminder (demo)', remMsg:'“{t}” ({c}) — about {h} hours left' });
+Object.assign(I18N['es'], { ld1:'1 día', ld12:'12 horas', ld6:'6 horas', ld1h:'1 hora', noDueTitle:'✅ No hay tareas próximas', noDueMsg:'No hay tareas con menos de {lead} restantes', webRemTitle:'⏰ Aviso en la app', emailRemTitle:'✉️ Recordatorio por correo (demo)', remMsg:'«{t}» ({c}) — quedan unas {h} horas' });
 let LANG = 'zh-CN';
 function t(key){
   const d = I18N[LANG] || I18N['zh-CN'];
   return (d && d[key] !== undefined) ? d[key] : ((I18N['zh-CN'] && I18N['zh-CN'][key] !== undefined) ? I18N['zh-CN'][key] : key);
+}
+/* 兜底短语翻译表：把仍写死在代码里的中文界面文案按语言翻译（按长度优先匹配） */
+const TX = {
+  ' 个任务':          { tw:' 個任務',   ja:' 件',        en:' tasks', es:' tareas' },
+  '手动':             { tw:'手動',      ja:'手動',       en:'Manual', es:'Manual' },
+  '未知':             { tw:'未知',      ja:'不明',       en:'Unknown', es:'Desconocido' },
+  '已编辑':           { tw:'已編輯',    ja:'編集済み',   en:'edited', es:'editado' },
+  '标记完成':         { tw:'標記完成',  ja:'完了にする', en:'Mark done', es:'Marcar completa' },
+  '删除该任务':       { tw:'刪除該任務',ja:'このタスクを削除', en:'Delete this task', es:'Eliminar esta tarea' },
+  '删除课程':         { tw:'刪除課程',  ja:'科目を削除', en:'Delete course', es:'Eliminar curso' },
+  '恢复':             { tw:'恢復',      ja:'元に戻す',   en:'Restore', es:'Restaurar' },
+  '取消':             { tw:'取消',      ja:'キャンセル', en:'Cancel', es:'Cancelar' },
+  '保存修改':         { tw:'儲存修改',  ja:'変更を保存', en:'Save changes', es:'Guardar cambios' },
+  '＋ 新建课程':      { tw:'＋ 新增課程', ja:'＋ 科目を追加', en:'＋ Add course', es:'＋ Añadir curso' },
+  '新课程/项目名称':  { tw:'新課程/專案名稱', ja:'新しい科目名', en:'New course / project name', es:'Nuevo curso / proyecto' },
+  '点此换颜色':       { tw:'點此換顏色', ja:'クリックで色変更', en:'Click to change color', es:'Clic para cambiar color' },
+  '课程/项目名称':    { tw:'課程/專案名稱', ja:'科目名', en:'Course / project name', es:'Curso / proyecto' },
+  '正在查看：':       { tw:'正在查看：', ja:'表示中：',  en:'Viewing: ', es:'Viendo: ' },
+  '全部未完成':       { tw:'全部未完成', ja:'未完了すべて', en:'All open', es:'Todas pendientes' },
+  '清除筛选':         { tw:'清除篩選',  ja:'フィルタ解除', en:'Clear filter', es:'Quitar filtro' },
+  '太棒了，当前没有未完成任务！': { tw:'太棒了，目前沒有未完成任務！', ja:'素晴らしい！未完了タスクはありません。', en:'Great, no pending tasks!', es:'¡Genial, no hay tareas pendientes!' },
+  '该分组暂时没有任务': { tw:'該分組暫時沒有任務', ja:'このグループにはタスクがありません', en:'No tasks in this group yet', es:'Aún no hay tareas en este grupo' },
+  '没有符合条件的任务': { tw:'沒有符合條件的任務', ja:'該当するタスクがありません', en:'No matching tasks', es:'No hay tareas que coincidan' },
+  '暂无任务，去右上角新建吧': { tw:'暫無任務，去右上角新建吧', ja:'タスクがありません。右上から作成できます', en:'No tasks — create one from the toolbar', es:'Sin tareas: créalas desde arriba' },
+  '新建第一个任务':   { tw:'新增第一個任務', ja:'最初のタスクを作成', en:'Create your first task', es:'Crear tu primera tarea' },
+  '作业':             { tw:'作業',      ja:'宿題',       en:'Assignment', es:'Tarea' },
+  '测验':             { tw:'測驗',      ja:'小テスト',   en:'Quiz', es:'Prueba' },
+  '讨论':             { tw:'討論',      ja:'ディスカッション', en:'Discussion', es:'Debate' },
+  '实验':             { tw:'實驗',      ja:'実験',       en:'Lab', es:'Laboratorio' },
+  '考试':             { tw:'考試',      ja:'試験',       en:'Exam', es:'Examen' },
+  '报告':             { tw:'報告',      ja:'レポート',   en:'Report', es:'Informe' },
+  '其他':             { tw:'其他',      ja:'その他',     en:'Other', es:'Otro' },
+  '（无标题）':       { tw:'（無標題）', ja:'（無題）',   en:'(Untitled)', es:'(Sin título)' },
+  '我的任务':         { tw:'我的任務',  ja:'マイタスク', en:'My tasks', es:'Mis tareas' },
+  'Canvas 导入课程':  { tw:'Canvas 匯入課程', ja:'Canvas 取込科目', en:'Canvas imported course', es:'Curso importado de Canvas' },
+  '约 ':              { tw:'約 ',       ja:'約 ',        en:'~', es:'~' },
+  '截止 ':            { tw:'截止 ',     ja:'締切 ',      en:'Due: ', es:'Vence: ' },
+  '请选择新的截止时间': { tw:'請選擇新的截止時間', ja:'新しい締切を選択してください', en:'Please choose a new due time', es:'Elige una nueva fecha límite' },
+  '请先填写邮箱':     { tw:'請先填寫信箱', ja:'メールを入力してください', en:'Enter your email first', es:'Introduce tu correo' },
+  '验证码已发送（演示）': { tw:'驗證碼已傳送（演示）', ja:'認証コード送信済み（デモ）', en:'Code sent (demo)', es:'Código enviado (demo)' },
+  '邮箱：':           { tw:'信箱：',    ja:'メール：',   en:'Email: ', es:'Correo: ' },
+  '邮箱格式不正确':   { tw:'信箱格式不正確', ja:'メール形式が正しくありません', en:'Invalid email format', es:'Formato de correo inválido' },
+  '✅ 邮箱绑定成功':  { tw:'✅ 信箱綁定成功', ja:'✅ メール連携完了', en:'✅ Email linked', es:'✅ Correo vinculado' },
+  '请先填写 Canvas Feed 链接': { tw:'請先填寫 Canvas Feed 連結', ja:'Canvas Feed のURLを入力してください', en:'Please enter your Canvas Feed URL', es:'Introduce la URL del feed de Canvas' },
+  '在下方粘贴你的日历 Feed 链接后再开启': { tw:'請在下貼上日曆Feed連結再開啟', ja:'下の欄にURLを入れてから有効化してください', en:'Paste the feed URL below, then enable', es:'Pega la URL abajo y luego activa' },
+  '请填写任务标题':   { tw:'請填寫任務標題', ja:'タスクのタイトルを入力', en:'Enter a task title', es:'Escribe el título de la tarea' },
+  '请选择截止时间':   { tw:'請選擇截止時間', ja:'締切を選択してください', en:'Pick a due time', es:'Elige la fecha límite' },
+  '请输入课程名称':   { tw:'請輸入課程名稱', ja:'科目名を入力してください', en:'Enter a course name', es:'Escribe el nombre del curso' },
+  '该课程已存在':     { tw:'該課程已存在', ja:'その科目は既にあります', en:'That course already exists', es:'Ese curso ya existe' },
+  '请先粘贴 Canvas 日历 Feed 链接': { tw:'請先貼上 Canvas 日曆 Feed 連結', ja:'Canvas Feed のURLを貼り付けてください', en:'Paste your Canvas calendar feed link', es:'Pega el enlace del feed de Canvas' },
+  '上次同步成功：':   { tw:'上次同步成功：', ja:'前回の同期成功：', en:'Last sync: ', es:'Última sincronización: ' },
+  '尚未同步':         { tw:'尚未同步',  ja:'未同期',     en:'Not synced yet', es:'Sin sincronizar' },
+  '上次失败':         { tw:'上次失敗',  ja:'前回は失敗', en:'Last attempt failed', es:'Falló la última vez' },
+  '下次刷新：':       { tw:'下次刷新：', ja:'次回更新：', en:'Next refresh: ', es:'Próxima actualización: ' },
+  '已解除绑定':       { tw:'已解除綁定', ja:'連携を解除しました', en:'Unlinked', es:'Vinculación eliminada' },
+  '跟随系统':         { tw:'跟隨系統',  ja:'システムに従う', en:'Follow system', es:'Seguir sistema' },
+  '数据仅保存在本机': { tw:'資料僅儲存在本機', ja:'データはこの端末のみに保存されます', en:'Data is stored on this device only', es:'Los datos se guardan solo en este dispositivo' },
+  '回到今天':         { tw:'回到今天',  ja:'今日に戻る', en:'Back to today', es:'Volver a hoy' },
+  '缩小（更大时间范围）': { tw:'縮小（更大時間範圍）', ja:'縮小（広い範囲）', en:'Zoom out (wider range)', es:'Alejar (rango mayor)' },
+  '放大（更细粒度）': { tw:'放大（更細粒度）', ja:'拡大（詳細表示）', en:'Zoom in (finer detail)', es:'Acercar (más detalle)' },
+  '向过去滑动一屏':   { tw:'向過去滑動一屏', ja:'過去へ1画面', en:'Scroll back one screen', es:'Desplazar atrás' },
+  '向未来滑动一屏':   { tw:'向未來滑動一屏', ja:'未来へ1画面', en:'Scroll forward one screen', es:'Desplazar adelante' }
+  ,'课程 / 项目颜色与名称': { tw:'課程 / 專案顏色與名稱', ja:'科目 / プロジェクトの色と名前', en:'Course / project colors & names', es:'Colores y nombres de cursos' }
+  ,'正在从 Canvas 抓取日历 Feed…': { tw:'正在從 Canvas 抓取日曆 Feed…', ja:'Canvas Feed を取得中…', en:'Fetching Canvas Feed…', es:'Obteniendo el feed de Canvas…' }
+  ,'⇩ 正在从 Canvas 抓取日历 Feed…': { tw:'⇩ 正在從 Canvas 抓取日曆 Feed…', ja:'⇩ Canvas Feed を取得中…', en:'⇩ Fetching Canvas Feed…', es:'⇩ Obteniendo el feed de Canvas…' }
+  ,'返回内容不是有效的 ICS': { tw:'返回內容不是有效的 ICS', ja:'返却内容が有効なICSではありません', en:'Response is not valid ICS', es:'La respuesta no es un ICS válido' }
+  ,'⚠️ 没有解析到作业（VEVENT），请检查链接是否过期或需要登录': { tw:'⚠️ 沒有解析到作業（VEVENT），請檢查連結是否過期或需要登入', ja:'⚠️ タスク（VEVENT）が見つかりません。URLの期限切れかログインが必要か確認してください', en:'⚠️ No tasks (VEVENT) found — check the link is valid or needs login', es:'⚠️ No se encontraron tareas (VEVENT); revisa el enlace o el inicio de sesión' }
+  ,'❌ 未能从该链接抓取到日历': { tw:'❌ 未能從該連結抓取到日曆', ja:'❌ このURLからカレンダーを取得できませんでした', en:'❌ Could not fetch a calendar from that link', es:'❌ No se pudo obtener el calendario de ese enlace' }
+  ,'⚠️ 未能抓取该 Feed（网页版需先部署 fetch-ics 转发函数）': { tw:'⚠️ 未能抓取該 Feed（網頁版需先部署 fetch-ics 轉發函數）', ja:'⚠️ Feedを取得できませんでした（Web版では fetch-ics のデプロイが必要です）', en:'⚠️ Could not fetch this Feed (deploy the fetch-ics function for the web version)', es:'⚠️ No se pudo obtener el feed (despliega fetch-ics en la versión web)' }
+  ,'⇩ Feed 自动刷新失败': { tw:'⇩ Feed 自動刷新失敗', ja:'⇩ Feed 自動更新に失敗', en:'⇩ Feed auto-refresh failed', es:'⇩ Falló la actualización automática' }
+  ,'⇩ Feed 自动刷新完成': { tw:'⇩ Feed 自動刷新完成', ja:'⇩ Feed 自動更新完了', en:'⇩ Feed auto-refresh done', es:'⇩ Actualización automática completada' }
+  ,'⇩ Feed 解析为空': { tw:'⇩ Feed 解析為空', ja:'⇩ Feed の解析結果は空', en:'⇩ Feed parsed empty', es:'⇩ El feed no contenía datos' }
+  ,'可能是登录过期或链接失效': { tw:'可能是登入過期或連結失效', ja:'ログイン切れかURLが無効の可能性', en:'Possibly the login expired or the link is invalid', es:'Puede que la sesión caducara o el enlace sea inválido' }
+  ,'请先粘贴 ICS 内容，或点"粘贴示例 ICS"': { tw:'請先貼上 ICS 內容，或點「貼上範例 ICS」', ja:'ICSを貼り付けるか「サンプルを貼る」を押してください', en:'Paste ICS content first, or click “Paste sample ICS”', es:'Pega el contenido ICS o pulsa “Pegar ICS de ejemplo”' }
+  ,'⚠️ 没有解析到 VEVENT，请检查内容是否为 .ics 格式': { tw:'⚠️ 沒有解析到 VEVENT，請檢查內容是否為 .ics 格式', ja:'⚠️ VEVENTが見つかりません。.ics形式か確認してください', en:'⚠️ No VEVENT found — check the content is .ics format', es:'⚠️ No se encontró VEVENT; comprueba que sea formato .ics' }
+};
+const TX_KEYS = Object.keys(TX).sort((a,b) => b.length - a.length);
+function trText(s){
+  if (LANG === 'zh-CN' || !s) return s;
+  let out = String(s);
+  for (const k of TX_KEYS){
+    const v = TX[k][LANG];
+    if (v !== undefined && out.includes(k)) out = out.split(k).join(v);
+  }
+  return out;
+}
+/* 渲染/切换语言后：翻译文档里仍残留的中文界面文本（不动输入框的值与用户数据） */
+function localizeDom(){
+  if (LANG === 'zh-CN') return;
+  const walk = el => {
+    if (el.nodeType === 3){
+      if (el.nodeValue && /[\u4e00-\u9fff]/.test(el.nodeValue)) el.nodeValue = trText(el.nodeValue);
+      return;
+    }
+    if (el.nodeType !== 1) return;
+    if (el.tagName === 'SCRIPT' || el.tagName === 'STYLE' || el.tagName === 'TEXTAREA') return;
+    ['title','placeholder','aria-label','alt'].forEach(a => {
+      const v = el.getAttribute(a);
+      if (v && /[\u4e00-\u9fff]/.test(v)) el.setAttribute(a, trText(v));
+    });
+    if (el.tagName === 'INPUT') return;   // 不翻译用户输入的值
+    for (const child of Array.from(el.childNodes)) walk(child);
+  };
+  const root = document.body || document.documentElement;
+  if (root) for (const child of Array.from(root.childNodes)) walk(child);
 }
 function applyLang(lang){
   LANG = (I18N[lang] ? lang : 'zh-CN');
@@ -2488,6 +2637,7 @@ function applyLang(lang){
   updateTypeList();
   renderAllViews();
   updateZoomUI();
+  localizeDom();
 }
 
 /* ================= 启动 ================= */
@@ -2504,6 +2654,7 @@ setTimeout(() => showDueNotifications(false), 1200);
 setInterval(() => {
   renderChips(); renderSoon(); renderAll(); renderDonePage(); renderTimeline();
   showDueNotifications(false);
+  localizeDom();
 }, 60000);
 
 </script>

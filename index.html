@@ -478,6 +478,10 @@
         <option value="low" data-i18n="prioLow">🟢 低</option>
         <option value="auto" data-i18n="prioAuto">自动（未手动设置）</option>
       </select>
+      <select id="fSort">
+        <option value="course" data-i18n="sortCourse"></option>
+        <option value="due" data-i18n="sortDue"></option>
+      </select>
       <input type="text" id="fSearch" data-i18n-ph="searchAll" placeholder="🔍 搜索任务…">
     </div>
     <div class="table-wrap">
@@ -1169,12 +1173,14 @@ function renderAll(){
     })
     .filter(t => (!fq || t.title.toLowerCase().includes(fq) || (courseOf(t.courseId)||{}).name.toLowerCase().includes(fq)))
     .sort((a,b) => {
+      const mode = ($('#fSort') && $('#fSort').value) || 'course';
+      if (mode === 'due') return a.due - b.due;
       const ca = (courseOf(a.courseId) || { name:'' }).name;
       const cb = (courseOf(b.courseId) || { name:'' }).name;
       const byCourse = ca.localeCompare(cb, 'zh-Hans-CN');
       if (byCourse) return byCourse;
       return a.due - b.due;
-    });
+    })
   const PER = 15;                              // 每页 15 条
   pagerMax = Math.max(1, Math.ceil(rows.length / PER));
   if (listPage > pagerMax) listPage = pagerMax;
@@ -1994,6 +2000,15 @@ function bind(){
     if (btn.dataset.act === 'del2'){ deleteTask(id); return; }
     if (btn.dataset.act === 'undo'){ t.status = 'open'; save(); renderAllViews(); }
   });
+  const fSortEl = $('#fSort');
+  if (fSortEl){
+    const sv = lsGet('ddl-sort-all');
+    if (sv) fSortEl.value = sv;
+    fSortEl.addEventListener('change', () => {
+      lsSet('ddl-sort-all', fSortEl.value);
+      listPage = 1; batchSel.clear(); renderAll();
+    });
+  }
   ['fCourse','fPrio','fSearch'].forEach(id => $('#'+id).addEventListener('input', () => { listPage = 1; batchSel.clear(); renderAll(); }));
   ['fCourseDone','fSearchDone'].forEach(id => $('#'+id).addEventListener('input', () => { donePage = 1; renderDonePage(); }));
   $('#pagerDone').addEventListener('click', e => {
@@ -2622,6 +2637,11 @@ Object.assign(I18N['zh-TW'], { noTaskAll:'太棒了，目前沒有未完成任�
 Object.assign(I18N['ja'], { noTaskAll:'素晴らしい！未完了タスクはありません。', newFirst:'最初のタスクを作成', viewOnly:'表示中', clickX:'✕ をクリック、または上部の「すべて」で戻る', clearFlt:'フィルタ解除' });
 Object.assign(I18N['en'], { noTaskAll:'Great, no pending tasks!', newFirst:'Create your first task', viewOnly:'Viewing', clickX:'Click ✕ or “All open” above to restore', clearFlt:'Clear filter' });
 Object.assign(I18N['es'], { noTaskAll:'¡Genial, no hay tareas pendientes!', newFirst:'Crear tu primera tarea', viewOnly:'Viendo', clickX:'Pulsa ✕ o «Todas pendientes» arriba para restaurar', clearFlt:'Quitar filtro' });
+Object.assign(I18N['zh-CN'], { sortCourse:'按课程首字母排序', sortDue:'按截止时间排序' });
+Object.assign(I18N['zh-TW'], { sortCourse:'按課程首字母排序', sortDue:'按截止時間排序' });
+Object.assign(I18N['ja'], { sortCourse:'科目名順（A–Z）', sortDue:'締切順' });
+Object.assign(I18N['en'], { sortCourse:'Sort by course (A–Z)', sortDue:'Sort by due time' });
+Object.assign(I18N['es'], { sortCourse:'Ordenar por curso (A–Z)', sortDue:'Ordenar por fecha límite' });
 let LANG = 'zh-CN';
 function t(key){
   const d = I18N[LANG] || I18N['zh-CN'];

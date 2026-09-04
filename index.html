@@ -415,7 +415,7 @@
   <section class="view active" id="view-soon">
     <div class="section-title" data-i18n="titleCards">任务卡</div>
     <div class="cards-search"><input type="text" id="searchSoon" data-i18n-ph="searchCards" placeholder="🔍 搜索任务卡…"></div>
-    <div class="cards-tool"><label>每页 <select id="soonPer">
+    <div class="cards-tool"><label>每页行数： <select id="soonPer">
       <option value="5">5</option><option value="10">10</option><option value="15" selected>15</option><option value="0">全部</option>
     </select></label></div>
     <div id="soonGrid"></div>
@@ -1023,7 +1023,12 @@ function renderSoon(){
   const listOf = g => opens.filter(g.test).sort((a,b) => taskCompare(a, b, now));
   const only = soonOnly ? groups.find(g => g.key === soonOnly) : null;
   const perRaw = ($('#soonPer') && $('#soonPer').value) || '15';
-  const per = perRaw === '0' ? 0 : Math.max(1, parseInt(perRaw, 10) || 15);
+  // “5/10/15” = 每页多少“行”卡片；行数 × 每行卡片数 = 每页张数（随窗口宽度自适应）
+  const gridEl = $('#soonGrid');
+  const gridW = gridEl ? gridEl.clientWidth : 640;
+  const cardMin = 270, gapX = 14;
+  const cols = window.innerWidth <= 760 ? 1 : Math.max(2, Math.floor((gridW + gapX) / (cardMin + gapX)));
+  const per = perRaw === '0' ? 0 : Math.max(1, (parseInt(perRaw, 10) || 5) * cols);
   const pagerEl = $('#pagerSoon');
   let html = '';
   if (only) html += `<div class="filter-note">${t('viewOnly')}：<b>${escapeHtml(only.name)}</b> · ${t('clickX')}<button class="btn small" onclick="clearSoonFilter()">✕ ${t('clearFlt')}</button></div>`;
@@ -1789,7 +1794,10 @@ function bind(){
   $('#tlNext').addEventListener('click', () => scrollEl.scrollBy({ left: Math.round(scrollEl.clientWidth * 0.9), behavior: 'smooth' }));
   $('#tlToday').addEventListener('click', () => centerOnToday(true));
   document.querySelector('.tab[data-view="timeline"]').addEventListener('click', () => setTimeout(() => setZoomLevel(zi), 30));
-  window.addEventListener('resize', () => { clearTimeout(window.__tlResize); window.__tlResize = setTimeout(() => renderTimeline(), 150); });
+  window.addEventListener('resize', () => {
+    clearTimeout(window.__tlResize);
+    window.__tlResize = setTimeout(() => { renderTimeline(); renderSoon(); }, 150);
+  });
 
   let drag = null;
   scrollEl.addEventListener('pointerdown', e => {
@@ -2646,6 +2654,8 @@ const TX = {
   '数据仅保存在本机': { tw:'資料僅儲存在本機', ja:'データはこの端末のみに保存されます', en:'Data is stored on this device only', es:'Los datos se guardan solo en este dispositivo' },
   '回到今天':         { tw:'回到今天',  ja:'今日に戻る', en:'Back to today', es:'Volver a hoy' },
   '每页':             { tw:'每頁',      ja:'ページごと', en:'Per page', es:'Por página' },
+  '每页行数':         { tw:'每頁行數',  ja:'1ページの行数', en:'Rows per page', es:'Filas por página' },
+  '每页行数：':       { tw:'每頁行數：', ja:'1ページの行数：', en:'Rows per page: ', es:'Filas por página: ' },
   '全部':             { tw:'全部',      ja:'すべて',     en:'All', es:'Todo' },
   '缩小（更大时间范围）': { tw:'縮小（更大時間範圍）', ja:'縮小（広い範囲）', en:'Zoom out (wider range)', es:'Alejar (rango mayor)' },
   '放大（更细粒度）': { tw:'放大（更細粒度）', ja:'拡大（詳細表示）', en:'Zoom in (finer detail)', es:'Acercar (más detalle)' },

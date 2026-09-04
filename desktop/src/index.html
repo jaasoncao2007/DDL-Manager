@@ -1023,12 +1023,12 @@ function renderSoon(){
   const listOf = g => opens.filter(g.test).sort((a,b) => taskCompare(a, b, now));
   const only = soonOnly ? groups.find(g => g.key === soonOnly) : null;
   const perRaw = ($('#soonPer') && $('#soonPer').value) || '15';
-  // “5/10/15” = 每页多少“行”卡片；行数 × 每行卡片数 = 每页张数（随窗口宽度自适应）
+  // “5/10/15” = 每页显示多少“行”卡片
+  const rowsTarget = perRaw === '0' ? 0 : Math.max(1, parseInt(perRaw, 10) || 5);
   const gridEl = $('#soonGrid');
   const gridW = gridEl ? gridEl.clientWidth : 640;
   const cardMin = 270, gapX = 14;
   const cols = window.innerWidth <= 760 ? 1 : Math.max(2, Math.floor((gridW + gapX) / (cardMin + gapX)));
-  const per = perRaw === '0' ? 0 : Math.max(1, (parseInt(perRaw, 10) || 5) * cols);
   const pagerEl = $('#pagerSoon');
   let html = '';
   if (only) html += `<div class="filter-note">${t('viewOnly')}：<b>${escapeHtml(only.name)}</b> · ${t('clickX')}<button class="btn small" onclick="clearSoonFilter()">✕ ${t('clearFlt')}</button></div>`;
@@ -1054,12 +1054,23 @@ function renderSoon(){
     localizeDom();
     return;
   }
-  if (per > 0){
-    const total = Math.max(1, Math.ceil(flat.length / per));
+  if (rowsTarget > 0){
+    // 按“真实渲染行”分页：每组重新起一行，组内不满整行的空位也计入行数
+    let col = 0, lastKey = null, rowNo = 0;
+    const rowNoArr = flat.map(it => {
+      if (it.key !== lastKey){ col = 0; lastKey = it.key; }
+      if (col === 0) rowNo++;
+      col++;
+      if (col >= cols) col = 0;
+      return rowNo;
+    });
+    const totalRows = rowNoArr.length ? rowNoArr[rowNoArr.length - 1] : 0;
+    const total = Math.max(1, Math.ceil(totalRows / rowsTarget));
     soonTotal = total;
     if (soonPage > total) soonPage = total;
     if (soonPage < 1) soonPage = 1;
-    const slice = flat.slice((soonPage - 1) * per, soonPage * per);
+    const rStart = (soonPage - 1) * rowsTarget, rEnd = soonPage * rowsTarget;
+    const slice = flat.filter((_, i) => rowNoArr[i] > rStart && rowNoArr[i] <= rEnd);
     let prevKey = null, open = false;
     slice.forEach(it => {
       if (it.key !== prevKey){

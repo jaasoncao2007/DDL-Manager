@@ -989,7 +989,6 @@ function cardHtml(task){
     <h3>${escapeHtml(task.title)}</h3>
     <div class="meta"><span>📅 <b>${fmtDate(task.due)}</b></span>${task.hours ? `<span>⏱ 约 ${task.hours}h</span>` : ''}</div>
     <div class="countdown" style="color:${color}">${countdownText(task.due)}</div>
-    ${task.notes ? `<div class="meta" style="color:#7a8296">📝 ${escapeHtml(task.notes)}</div>` : ''}
     <div class="foot" style="border-left:4px solid ${color};padding-left:10px;margin-left:-4px">
       <span></span>
       <div style="display:flex;gap:6px">
@@ -1027,8 +1026,7 @@ function renderSoon(){
   const rowsTarget = perRaw === '0' ? 0 : Math.max(1, parseInt(perRaw, 10) || 5);
   const gridEl = $('#soonGrid');
   const gridW = gridEl ? gridEl.clientWidth : 640;
-  const cardMin = 270, gapX = 14;
-  const cols = window.innerWidth <= 760 ? 1 : Math.max(2, Math.floor((gridW + gapX) / (cardMin + gapX)));
+  const cols = window.innerWidth <= 760 ? 1 : measureSoonCols(gridW);
   const pagerEl = $('#pagerSoon');
   let html = '';
   if (only) html += `<div class="filter-note">${t('viewOnly')}：<b>${escapeHtml(only.name)}</b> · ${t('clickX')}<button class="btn small" onclick="clearSoonFilter()">✕ ${t('clearFlt')}</button></div>`;
@@ -1107,6 +1105,28 @@ function renderSoon(){
   localizeDom();
 }
 function clearSoonFilter(){ soonOnly = null; soonPage = 1; renderSoon(); }
+/* 直接测量当前容器实际每行能放几张卡（避免估算偏差导致多一行） */
+function measureSoonCols(W){
+  const grid = $('#soonGrid');
+  if (!grid) return 1;
+  const probe = document.createElement('div');
+  probe.className = 'grid';
+  probe.style.cssText = `position:absolute;left:-20000px;top:0;width:${W}px;visibility:hidden;pointer-events:none;`;
+  probe.innerHTML = new Array(60).fill('<div style="min-height:16px"></div>').join('');
+  grid.appendChild(probe);
+  let cols = 1;
+  try {
+    const items = Array.from(probe.children);
+    if (items.length){
+      const tops = new Set(items.map(el => Math.round(el.getBoundingClientRect().top)));
+      const rows = tops.size || 1;
+      cols = Math.max(1, Math.ceil(items.length / rows));
+    }
+  } finally {
+    grid.removeChild(probe);
+  }
+  return cols;
+}
 /* FLIP：让其余卡片从旧位置平滑滑到新位置补位 */
 function snapSoon(){
   const m = new Map();
@@ -1550,7 +1570,7 @@ function addEventsAsTasks(events){
       title: titleFromSummary(info.title),
       type: '',
       due, source: 'canvas', canvasUid: uidKey, originalDue: due,
-      notes: String(ev.description || '').slice(0, 80)
+      notes: ''
     });
     known.add(uidKey);
     added++;
@@ -2245,7 +2265,7 @@ function mergeCanvasEvents(events){
       const t = {
         id: uid(), courseId: c.id, title: titleFromSummary(info.title).trim(),
         type: '', due, hours: null, source: 'canvas', status: 'open',
-        notes: String(ev.description || '').slice(0, 80),
+        notes: '',
         canvasUid: uidKey, priority: '', originalDue: due, ddlEdited: false
       };
       state.tasks.push(t);

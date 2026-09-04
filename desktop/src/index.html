@@ -374,6 +374,8 @@
   .cards-search input{width:100%; box-sizing:border-box; border:1px solid var(--line); border-radius:10px;
     padding:8px 12px; font-size:13px; font-family:inherit; background:var(--card); color:var(--ink);}
   .cards-search input:focus{outline:none; border-color:var(--brand); box-shadow:0 0 0 3px var(--brand-soft);}
+  .cards-tool{display:flex; align-items:center; gap:6px; margin:0 0 10px; font-size:12.5px; color:var(--muted); font-weight:600;}
+  .cards-tool select{border:1px solid var(--line); border-radius:8px; padding:4px 6px; font-size:12.5px; font-family:inherit; background:var(--card); color:var(--ink); cursor:pointer;}
   .foot{text-align:center; color:#98a1b3; font-size:12px; margin-top:26px;}
   .foot button{border:none; background:none; color:var(--brand); cursor:pointer; font-size:12px; text-decoration:underline;}
   ::-webkit-scrollbar{height:9px; width:9px;}
@@ -413,7 +415,11 @@
   <section class="view active" id="view-soon">
     <div class="section-title" data-i18n="titleCards">任务卡</div>
     <div class="cards-search"><input type="text" id="searchSoon" data-i18n-ph="searchCards" placeholder="🔍 搜索任务卡…"></div>
+    <div class="cards-tool"><label>每页 <select id="soonPer">
+      <option value="5">5</option><option value="10">10</option><option value="15" selected>15</option><option value="0">全部</option>
+    </select></label></div>
     <div id="soonGrid"></div>
+    <div class="pager" id="pagerSoon"></div>
   </section>
 
   <section class="view" id="view-timeline">
@@ -761,6 +767,8 @@ const PRI_ORDER = { urgent:0, high:1, mid:2, low:3, '':4 };
 function lsGet(k){ try { return localStorage.getItem(k); } catch(e){ return null; } }
 function lsSet(k, v){ try { localStorage.setItem(k, v); } catch(e){} }
 let soonOnly = null;         // “任务卡”页的分组筛选（over/d3/week/later）
+let soonPage = 1;            // 任务卡当前页
+let soonTotal = 1;           // 任务卡总页数
 let editingId = null;         // 正在编辑的任务 id
 let listPage = 1;          // 全部任务当前页
 let pagerMax = 1;           // 全部任务总页数
@@ -1014,34 +1022,75 @@ function renderSoon(){
   ];
   const listOf = g => opens.filter(g.test).sort((a,b) => taskCompare(a, b, now));
   const only = soonOnly ? groups.find(g => g.key === soonOnly) : null;
-  const show = only ? [only] : groups;
+  const perRaw = ($('#soonPer') && $('#soonPer').value) || '15';
+  const per = perRaw === '0' ? 0 : Math.max(1, parseInt(perRaw, 10) || 15);
+  const pagerEl = $('#pagerSoon');
   let html = '';
-  if (only) html += `<div class="filter-note">正在查看：<b>${only.name}</b> · 点击 ✕ 或顶部「全部未完成」恢复全部<button class="btn small" onclick="clearSoonFilter()">✕ 清除筛选</button></div>`;
-  let added = false;
-  show.forEach(g => {
+  if (only) html += `<div class="filter-note">${t('viewOnly')}：<b>${escapeHtml(only.name)}</b> · ${t('clickX')}<button class="btn small" onclick="clearSoonFilter()">✕ ${t('clearFlt')}</button></div>`;
+  const cnt = {};
+  let flat = [];
+  (only ? [only] : groups).forEach(g => {
     const items = listOf(g);
-    if (!items.length) return;
-    added = true;
-    html += `<div class="grp">
-      <div class="grp-h"><i class="gdot" style="background:${g.dot}"></i>${g.name}<span class="cnt">${items.length}</span></div>
-      <div class="grid">${items.map(cardHtml).join('')}</div>
-    </div>`;
+    cnt[g.key] = items.length;
+    items.forEach(x => flat.push({ t: x, key: g.key, dot: g.dot, name: g.name }));
   });
-  if (!opens.length && !only){
-    if (q && hasAnyOpen){
-      $('#soonGrid').innerHTML = `<div class="empty"><div class="big">🔍</div>${t('notFound')}</div>`;
-      localizeDom();
-    } else {
-      $('#soonGrid').innerHTML = `<div class="empty"><div class="big">🎉</div>太棒了，当前没有未完成任务！<br><br><button class="btn primary" onclick="document.getElementById('btnAdd').click()">＋ 新建第一个任务</button></div>`;
-      localizeDom();
-    }
+  if (!opens.length){
+    const emptyMsg = (q && hasAnyOpen)
+      ? `<div class="empty"><div class="big">🔍</div>${t('notFound')}</div>`
+      : `<div class="empty"><div class="big">🎉</div>${t('noTaskAll')}<br><br><button class="btn primary" onclick="document.getElementById('btnAdd').click()">＋ ${t('newFirst')}</button></div>`;
+    $('#soonGrid').innerHTML = emptyMsg;
+    if (pagerEl) pagerEl.innerHTML = '';
+    localizeDom();
     return;
   }
-  if (only && !added) html += `<div class="empty"><div class="big">🌤</div>${t('grpEmpty')}</div>`;
+  if (only && !flat.length){
+    $('#soonGrid').innerHTML = `<div class="empty"><div class="big">🌤</div>${t('grpEmpty')}</div>`;
+    if (pagerEl) pagerEl.innerHTML = '';
+    localizeDom();
+    return;
+  }
+  if (per > 0){
+    const total = Math.max(1, Math.ceil(flat.length / per));
+    soonTotal = total;
+    if (soonPage > total) soonPage = total;
+    if (soonPage < 1) soonPage = 1;
+    const slice = flat.slice((soonPage - 1) * per, soonPage * per);
+    let prevKey = null, open = false;
+    slice.forEach(it => {
+      if (it.key !== prevKey){
+        if (open) html += '</div></div>';
+        html += `<div class="grp"><div class="grp-h"><i class="gdot" style="background:${it.dot}"></i>${escapeHtml(it.name)}<span class="cnt">${cnt[it.key]}</span></div><div class="grid">`;
+        prevKey = it.key; open = true;
+      }
+      html += cardHtml(it.t);
+    });
+    if (open) html += '</div></div>';
+    if (pagerEl){
+      if (total > 1){
+        let ph = `<button class="pgb" data-soon="prev"${soonPage === 1 ? ' disabled' : ''}>‹</button>`;
+        const nums = [];
+        const push = n => { if (n >= 1 && n <= total && !nums.includes(n)) nums.push(n); };
+        push(1); for (let i = soonPage - 2; i <= soonPage + 2; i++) push(i); push(total);
+        nums.sort((a,b) => a-b);
+        let last = 0;
+        nums.forEach(n => { if (n - last > 1) ph += '<span class="pgdots">…</span>'; ph += `<button class="pgb${n === soonPage ? ' on' : ''}" data-soon="${n}">${n}</button>`; last = n; });
+        ph += `<button class="pgb" data-soon="next"${soonPage === total ? ' disabled' : ''}>›</button>`;
+        pagerEl.innerHTML = ph;
+      } else pagerEl.innerHTML = '';
+    }
+  } else {
+    soonTotal = 1; soonPage = 1;
+    (only ? [only] : groups).forEach(g => {
+      const items = listOf(g);
+      if (!items.length) return;
+      html += `<div class="grp"><div class="grp-h"><i class="gdot" style="background:${g.dot}"></i>${g.name}<span class="cnt">${items.length}</span></div><div class="grid">${items.map(cardHtml).join('')}</div></div>`;
+    });
+    if (pagerEl) pagerEl.innerHTML = '';
+  }
   $('#soonGrid').innerHTML = html;
   localizeDom();
 }
-function clearSoonFilter(){ soonOnly = null; renderSoon(); }
+function clearSoonFilter(){ soonOnly = null; soonPage = 1; renderSoon(); }
 /* FLIP：让其余卡片从旧位置平滑滑到新位置补位 */
 function snapSoon(){
   const m = new Map();
@@ -1981,7 +2030,27 @@ function bind(){
   });
 
   const soonSearch = $('#searchSoon');
-  if (soonSearch) soonSearch.addEventListener('input', () => { soonOnly = null; renderSoon(); });
+  if (soonSearch) soonSearch.addEventListener('input', () => { soonOnly = null; soonPage = 1; renderSoon(); });
+  const soonPerSel = $('#soonPer');
+  if (soonPerSel){
+    const savedPer = lsGet('ddl-soon-per');
+    if (savedPer) soonPerSel.value = savedPer;
+    soonPerSel.addEventListener('change', () => {
+      soonPage = 1;
+      lsSet('ddl-soon-per', soonPerSel.value);
+      renderSoon();
+    });
+  }
+  const pagerSoon = $('#pagerSoon');
+  if (pagerSoon) pagerSoon.addEventListener('click', e => {
+    const b = e.target.closest('button[data-soon]');
+    if (!b || b.disabled) return;
+    const v = b.dataset.soon;
+    if (v === 'prev') soonPage = Math.max(1, soonPage - 1);
+    else if (v === 'next') soonPage = Math.min(soonTotal, soonPage + 1);
+    else soonPage = parseInt(v, 10) || 1;
+    renderSoon();
+  });
   $('#btnReset').addEventListener('click', () => {
     openConfirm(t('resetAllMsg'), () => {
       state = emptyState(); normalize(); save(); refreshCourseOptions(); renderAllViews();
@@ -2509,6 +2578,11 @@ Object.assign(I18N['zh-TW'], { ld1:'1 天', ld12:'12 小時', ld6:'6 小時', ld
 Object.assign(I18N['ja'], { ld1:'1日', ld12:'12時間', ld6:'6時間', ld1h:'1時間', noDueTitle:'✅ まもなく締切のタスクはありません', noDueMsg:'残り {lead} 未満のタスクはありません', webRemTitle:'⏰ アプリ内通知', emailRemTitle:'✉️ メール通知（デモ）', remMsg:'「{t}」（{c}）残り約 {h} 時間' });
 Object.assign(I18N['en'], { ld1:'1 day', ld12:'12 hours', ld6:'6 hours', ld1h:'1 hour', noDueTitle:'✅ No tasks due soon', noDueMsg:'No tasks with less than {lead} remaining', webRemTitle:'⏰ In-app reminder', emailRemTitle:'✉️ Email reminder (demo)', remMsg:'“{t}” ({c}) — about {h} hours left' });
 Object.assign(I18N['es'], { ld1:'1 día', ld12:'12 horas', ld6:'6 horas', ld1h:'1 hora', noDueTitle:'✅ No hay tareas próximas', noDueMsg:'No hay tareas con menos de {lead} restantes', webRemTitle:'⏰ Aviso en la app', emailRemTitle:'✉️ Recordatorio por correo (demo)', remMsg:'«{t}» ({c}) — quedan unas {h} horas' });
+Object.assign(I18N['zh-CN'], { noTaskAll:'太棒了，当前没有未完成任务！', newFirst:'新建第一个任务', viewOnly:'正在查看', clickX:'点击 ✕ 或顶部「全部未完成」恢复全部', clearFlt:'清除筛选' });
+Object.assign(I18N['zh-TW'], { noTaskAll:'太棒了，目前沒有未完成任務！', newFirst:'新增第一個任務', viewOnly:'正在查看', clickX:'點擊 ✕ 或頂部「全部未完成」恢復全部', clearFlt:'清除篩選' });
+Object.assign(I18N['ja'], { noTaskAll:'素晴らしい！未完了タスクはありません。', newFirst:'最初のタスクを作成', viewOnly:'表示中', clickX:'✕ をクリック、または上部の「すべて」で戻る', clearFlt:'フィルタ解除' });
+Object.assign(I18N['en'], { noTaskAll:'Great, no pending tasks!', newFirst:'Create your first task', viewOnly:'Viewing', clickX:'Click ✕ or “All open” above to restore', clearFlt:'Clear filter' });
+Object.assign(I18N['es'], { noTaskAll:'¡Genial, no hay tareas pendientes!', newFirst:'Crear tu primera tarea', viewOnly:'Viendo', clickX:'Pulsa ✕ o «Todas pendientes» arriba para restaurar', clearFlt:'Quitar filtro' });
 let LANG = 'zh-CN';
 function t(key){
   const d = I18N[LANG] || I18N['zh-CN'];
@@ -2571,6 +2645,8 @@ const TX = {
   '跟随系统':         { tw:'跟隨系統',  ja:'システムに従う', en:'Follow system', es:'Seguir sistema' },
   '数据仅保存在本机': { tw:'資料僅儲存在本機', ja:'データはこの端末のみに保存されます', en:'Data is stored on this device only', es:'Los datos se guardan solo en este dispositivo' },
   '回到今天':         { tw:'回到今天',  ja:'今日に戻る', en:'Back to today', es:'Volver a hoy' },
+  '每页':             { tw:'每頁',      ja:'ページごと', en:'Per page', es:'Por página' },
+  '全部':             { tw:'全部',      ja:'すべて',     en:'All', es:'Todo' },
   '缩小（更大时间范围）': { tw:'縮小（更大時間範圍）', ja:'縮小（広い範囲）', en:'Zoom out (wider range)', es:'Alejar (rango mayor)' },
   '放大（更细粒度）': { tw:'放大（更細粒度）', ja:'拡大（詳細表示）', en:'Zoom in (finer detail)', es:'Acercar (más detalle)' },
   '向过去滑动一屏':   { tw:'向過去滑動一屏', ja:'過去へ1画面', en:'Scroll back one screen', es:'Desplazar atrás' },

@@ -12,3 +12,7 @@ dist-windows/
 *.exe
 *.zip
 dist-send/
+
+# 本地更新私钥备份，严禁提交
+DDL-*私钥*.txt
+*.update-key

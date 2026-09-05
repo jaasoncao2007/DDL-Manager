@@ -25,6 +25,7 @@
   "bundle": {
     "active": true,
     "targets": "all",
+    "createUpdaterArtifacts": true,
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
@@ -32,5 +33,13 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ]
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDg1NzFBRUM0NTUxNkYzN0EKUldSNjh4WlZ4SzV4aFhnMmcrcGJXYU95S3pyM1g0TER5NFF0VTR6b1Q2Ri9sMUVHU3BCdnhiRjcK",
+      "endpoints": [
+        "https://github.com/jaasoncao2007/DDL-Manager/releases/latest/download/latest.json"
+      ]
+    }
   }
 }

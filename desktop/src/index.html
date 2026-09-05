@@ -2697,6 +2697,11 @@ Object.assign(I18N['zh-TW'], { cleanTitle:'🧹 自動清理已逾期', cleanDay
 Object.assign(I18N['ja'], { cleanTitle:'🧹 期限切れタスクの自動削除', cleanDaysLabel:'超過日数で削除', autoCleanOn:'長期間期限切れのタスクを自動削除', cleanNote:'オンにすると、未完了かつ期限から選択した日数を超えたタスクを自動削除します（完了タスクは対象外）。' });
 Object.assign(I18N['en'], { cleanTitle:'🧹 Auto-clean overdue', cleanDaysLabel:'Delete when overdue >', autoCleanOn:'Auto-delete long-overdue tasks', cleanNote:'When enabled, unfinished tasks overdue by more than the selected days are deleted automatically. Completed tasks are kept.' });
 Object.assign(I18N['es'], { cleanTitle:'🧹 Limpiar vencidas', cleanDaysLabel:'Borrar si vence en >', autoCleanOn:'Borrar automáticamente tareas muy vencidas', cleanNote:'Si se activa, las tareas sin completar vencidas hace más de los días elegidos se borran solas. Las completadas se conservan.' });
+Object.assign(I18N['zh-CN'], { updFound:'发现新版本', updClick:'点击此提示即可自动更新', updInstalling:'正在下载安装，请稍候…', updDone:'已安装，请重启应用', updFailed:'更新失败' });
+Object.assign(I18N['zh-TW'], { updFound:'發現新版本', updClick:'點擊此提示即可自動更新', updInstalling:'正在下載安裝，請稍候…', updDone:'已安裝，請重新啟動應用', updFailed:'更新失敗' });
+Object.assign(I18N['ja'], { updFound:'新しいバージョンがあります', updClick:'この通知をクリックして更新', updInstalling:'ダウンロード中…', updDone:'インストール済み。再起動してください', updFailed:'更新に失敗しました' });
+Object.assign(I18N['en'], { updFound:'Update available', updClick:'Click this notice to update', updInstalling:'Downloading & installing…', updDone:'Installed — please restart the app', updFailed:'Update failed' });
+Object.assign(I18N['es'], { updFound:'Actualización disponible', updClick:'Haz clic en este aviso para actualizar', updInstalling:'Descargando e instalando…', updDone:'Instalado: reinicia la app', updFailed:'Error al actualizar' });
 let LANG = 'zh-CN';
 function t(key){
   const d = I18N[LANG] || I18N['zh-CN'];
@@ -2839,6 +2844,31 @@ applyBg(account.bg || '#f3f5fa', false);
 initClock();
 refreshCourseOptions();
 try { bind(); } catch(e){ console.error(e); }
+/* 桌面版：自动更新提示 */
+(function(){
+  if (!(window.__TAURI__ && window.__TAURI__.event && window.__TAURI__.core)) return;
+  const listen = window.__TAURI__.event.listen;
+  const invoke = window.__TAURI__.core.invoke;
+  listen('update-available', e => {
+    const box = $('#toasts');
+    if (!box) return;
+    const el = document.createElement('div');
+    el.className = 'toast warn';
+    el.innerHTML = `<h4>🔄 ${t('updFound')} v${escapeHtml(String(e.payload))}</h4><p>${t('updClick')}</p>`;
+    box.appendChild(el);
+    el.addEventListener('click', async () => {
+      try {
+        el.innerHTML = `<h4>⬇️ ${t('updInstalling')}</h4>`;
+        await invoke('install_update');
+        el.innerHTML = `<h4>✅ ${t('updDone')}</h4>`;
+      } catch(err){
+        el.innerHTML = `<h4>❌ ${t('updFailed')}: ${escapeHtml(String(err))}</h4>`;
+      }
+      setTimeout(() => { if (el.parentNode) el.remove(); }, 6000);
+    });
+    setTimeout(() => { if (el.parentNode){ el.classList.add('hide'); setTimeout(() => el.remove(), 260); } }, 30000);
+  });
+})();
 applyLang(lsGet('ddl-lang') || 'zh-CN');
 normalizeCanvasCourseNames();
 scheduleFeed();

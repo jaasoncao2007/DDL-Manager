@@ -378,6 +378,7 @@
   .cards-tool select{border:1px solid var(--line); border-radius:8px; padding:4px 6px; font-size:12.5px; font-family:inherit; background:var(--card); color:var(--ink); cursor:pointer;}
   .foot{text-align:center; color:#98a1b3; font-size:12px; margin-top:26px;}
   .foot button{border:none; background:none; color:var(--brand); cursor:pointer; font-size:12px; font-weight:600; text-decoration:none;}
+  .foot .foot-ver{margin-top:5px; opacity:.85; font-variant-numeric:tabular-nums;}
   ::-webkit-scrollbar{height:9px; width:9px;}
   ::-webkit-scrollbar-thumb{background:#cdd3e0; border-radius:8px;}
   ::-webkit-scrollbar-track{background:transparent;}
@@ -514,7 +515,8 @@
 </main>
 
 <div class="foot">
-  数据仅保存在本机 · <button id="btnReset" data-i18n="resetAll">清空全部数据</button>
+  <div>数据仅保存在本机 · <button id="btnReset" data-i18n="resetAll">清空全部数据</button></div>
+  <div class="foot-ver"><span data-i18n="verLabel">此版本：</span><span id="appVer"></span></div>
 </div>
 
 <!-- Modal: 新建任务 -->
@@ -2657,6 +2659,11 @@ Object.assign(I18N['zh-TW'], { resetAll:'清空全部資料', resetAllMsg:'確�
 Object.assign(I18N['ja'], { resetAll:'すべてのデータを消去', resetAllMsg:'すべてのタスクと科目を削除しますか？元に戻せません。' });
 Object.assign(I18N['en'], { resetAll:'Clear all data', resetAllMsg:'Clear all tasks and courses? This cannot be undone.' });
 Object.assign(I18N['es'], { resetAll:'Borrar todos los datos', resetAllMsg:'¿Borrar todas las tareas y cursos? Esta acción no se puede deshacer.' });
+Object.assign(I18N['zh-CN'], { verLabel:'此版本：' });
+Object.assign(I18N['zh-TW'], { verLabel:'此版本：' });
+Object.assign(I18N['ja'], { verLabel:'バージョン：' });
+Object.assign(I18N['en'], { verLabel:'Version: ' });
+Object.assign(I18N['es'], { verLabel:'Versión: ' });
 Object.assign(I18N['zh-CN'], { searchCards:'🔍 搜索任务卡（标题 / 课程 / 类型 / 备注）…', notFound:'未找到相关任务' });
 Object.assign(I18N['zh-TW'], { searchCards:'🔍 搜尋任務卡（標題 / 課程 / 類型 / 備註）…', notFound:'未找到相關任務' });
 Object.assign(I18N['ja'], { searchCards:'🔍 タスクを検索（タイトル / 科目 / タグ / メモ）…', notFound:'該当するタスクが見つかりません' });
@@ -2703,6 +2710,7 @@ Object.assign(I18N['ja'], { updFound:'新しいバージョンがあります', 
 Object.assign(I18N['en'], { updFound:'Update available', updClick:'Click this notice to update', updInstalling:'Downloading & installing…', updDone:'Installed — please restart the app', updFailed:'Update failed' });
 Object.assign(I18N['es'], { updFound:'Actualización disponible', updClick:'Haz clic en este aviso para actualizar', updInstalling:'Descargando e instalando…', updDone:'Instalado: reinicia la app', updFailed:'Error al actualizar' });
 let LANG = 'zh-CN';
+const APP_VERSION = '1.0.1';
 function t(key){
   const d = I18N[LANG] || I18N['zh-CN'];
   return (d && d[key] !== undefined) ? d[key] : ((I18N['zh-CN'] && I18N['zh-CN'][key] !== undefined) ? I18N['zh-CN'][key] : key);
@@ -2789,26 +2797,44 @@ const TX = {
 const TX_KEYS = Object.keys(TX).sort((a,b) => b.length - a.length);
 function trText(s){
   if (LANG === 'zh-CN' || !s) return s;
+  const lk = (LANG === 'zh-TW') ? 'tw' : LANG;   // 兜底表用 tw 存繁体
   let out = String(s);
   for (const k of TX_KEYS){
-    const v = TX[k][LANG];
+    const v = TX[k][lk];
     if (v !== undefined && out.includes(k)) out = out.split(k).join(v);
   }
   return out;
 }
 /* 渲染/切换语言后：翻译文档里仍残留的中文界面文本（不动输入框的值与用户数据） */
+const TX_TEXT = new WeakMap();   // 文本节点 -> 原始中文
+const TX_ATTR = new WeakMap();   // 元素 -> { 属性: 原始中文 }
 function localizeDom(){
-  if (LANG === 'zh-CN') return;
+  const toZh = (LANG === 'zh-CN');
   const walk = el => {
     if (el.nodeType === 3){
-      if (el.nodeValue && /[\u4e00-\u9fff]/.test(el.nodeValue)) el.nodeValue = trText(el.nodeValue);
+      const cur = el.nodeValue || '';
+      if (!cur) return;
+      let src = TX_TEXT.get(el);
+      if (src === undefined){
+        if (/[\u4e00-\u9fff]/.test(cur)){ TX_TEXT.set(el, cur); src = cur; }
+      }
+      if (src === undefined) return;
+      const target = toZh ? src : trText(src);
+      if (el.nodeValue !== target) el.nodeValue = target;
       return;
     }
     if (el.nodeType !== 1) return;
     if (el.tagName === 'SCRIPT' || el.tagName === 'STYLE' || el.tagName === 'TEXTAREA') return;
     ['title','placeholder','aria-label','alt'].forEach(a => {
-      const v = el.getAttribute(a);
-      if (v && /[\u4e00-\u9fff]/.test(v)) el.setAttribute(a, trText(v));
+      const cur = el.getAttribute(a);
+      if (!cur) return;
+      let st = TX_ATTR.get(el);
+      if (!st){ st = {}; TX_ATTR.set(el, st); }
+      if (st[a] === undefined && /[\u4e00-\u9fff]/.test(cur)) st[a] = cur;
+      if (st[a] !== undefined){
+        const target = toZh ? st[a] : trText(st[a]);
+        if (cur !== target) el.setAttribute(a, target);
+      }
     });
     if (el.tagName === 'INPUT') return;   // 不翻译用户输入的值
     for (const child of Array.from(el.childNodes)) walk(child);
@@ -2870,6 +2896,8 @@ try { bind(); } catch(e){ console.error(e); }
   });
 })();
 applyLang(lsGet('ddl-lang') || 'zh-CN');
+const verEl = document.getElementById('appVer');
+if (verEl) verEl.textContent = APP_VERSION;
 normalizeCanvasCourseNames();
 scheduleFeed();
 setTimeout(() => autoCleanOverdue(), 400);

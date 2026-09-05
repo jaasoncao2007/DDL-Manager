@@ -25,12 +25,18 @@ async fn fetch_feed(url: String) -> Result<String, String> {
     resp.text().await.map_err(|e| format!("read: {e}"))
 }
 
-/// 检查是否有新版本。返回新版本号（无则 None）。
+/// 检查是否有新版本。返回新版本号与更新日志（无则 None）。
+#[derive(serde::Serialize)]
+struct UpdInfo {
+    version: String,
+    notes: Option<String>,
+}
+
 #[tauri::command]
-async fn check_for_update(app: tauri::AppHandle) -> Result<Option<String>, String> {
+async fn check_for_update(app: tauri::AppHandle) -> Result<Option<UpdInfo>, String> {
     let updater = app.updater().map_err(|e| e.to_string())?;
     match updater.check().await {
-        Ok(Some(u)) => Ok(Some(u.version.to_string())),
+        Ok(Some(u)) => Ok(Some(UpdInfo { version: u.version.to_string(), notes: u.body })),
         Ok(None) => Ok(None),
         Err(e) => Err(e.to_string()),
     }

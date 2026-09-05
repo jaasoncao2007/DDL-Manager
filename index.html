@@ -396,7 +396,7 @@
     <button class="btn" id="btnImport" data-i18n="import">Canvas 导入</button>
     <button class="btn" id="btnCourses" data-i18n="courses">🎨 课程管理</button>
     <button class="btn primary" id="btnAdd" data-i18n="addTask">＋ 新建任务</button>
-    <button class="btn" id="btnAccount" data-i18n="account">👤 账号</button>
+    <button class="btn" id="btnAccount" data-i18n="account">👤 个人资料</button>
   </div>
 </header>
 
@@ -660,7 +660,7 @@
 <!-- Modal: 账号与通知 -->
 <div class="overlay" id="ovAccount">
   <div class="modal">
-    <h2 data-i18n="accTitle">👤 账号与截止提醒</h2>
+    <h2 data-i18n="accTitle">👤 个人资料与截止提醒</h2>
     <div class="desc" data-i18n="accDesc"></div>
 
     <div class="sub-block">
@@ -2468,7 +2468,7 @@ function initClock(){
 /* ================= 语言（i18n） ================= */
 const I18N = {
   'zh-CN': {
-    import:'Canvas 导入', courses:'🎨 课程管理', addTask:'＋ 新建任务', account:'👤 账号',
+    import:'Canvas 导入', courses:'🎨 课程管理', addTask:'＋ 新建任务', account:'👤 个人资料',
     tabCards:'🗃️ 任务卡', tabTimeline:'📅 时间轴', tabAll:'🗂 全部任务', tabDone:'✅ 已完成',
     titleCards:'任务卡', titleTimeline:'时间轴', titleAll:'全部任务', titleDone:'已完成任务',
     thTask:'任务', thCourse:'课程', thType:'类型', thDue:'截止时间', thRemain:'剩余', thUrgency:'紧急度', thSource:'来源',
@@ -2488,7 +2488,7 @@ const I18N = {
     step1:'① 获取日历链接（在 Canvas 里操作一次）', step1Note:'Canvas → 日历 → 「Calendar Feed」→ 复制订阅 URL（webcal://… 开头）',
     step2:'② 粘贴链接并导入', feedPh:'webcal://school.instructure.com/feeds/calendars/...', goImport:'导入',
     step3:'③ 高级：直接粘贴 / 上传 .ics 文件内容', sampleIcs:'粘贴示例 ICS', uploadIcs:'选择 .ics 文件', parseIcs:'解析并导入',
-    accTitle:'👤 账号与截止提醒', accDesc:'绑定邮箱，并选择截止提醒的接收方式', accMail:'📧 邮箱绑定', accMailPh:'you@example.edu',
+    accTitle:'👤 个人资料与截止提醒', accDesc:'绑定邮箱，并选择截止提醒的接收方式', accMail:'📧 邮箱绑定', accMailPh:'you@example.edu',
     sendCode:'发送验证码', bind:'绑定', unbind:'解除', stateUnbound:'未绑定（可选）',
     notifyTitle:'🔔 截止提醒', leadLabel:'剩余时间不足多少时提醒', lead24:'1 天（24 小时）', lead12:'12 小时', lead6:'6 小时', lead1:'1 小时',
     chLabel:'提醒渠道', webCh:'网页内提醒', emailCh:'邮箱提醒', notifyOn:'开启截止提醒',
@@ -2498,7 +2498,7 @@ const I18N = {
     stateBound:'已绑定', editCanvasNote:'Canvas 任务：手动编辑后，重新同步时不会被覆盖（正式桌面版会保留你的修改）。'
   },
   'zh-TW': {
-    import:'從 Canvas 匯入', courses:'🎨 課程管理', addTask:'＋ 新增任務', account:'👤 帳號',
+    import:'從 Canvas 匯入', courses:'🎨 課程管理', addTask:'＋ 新增任務', account:'👤 個人資料',
     tabCards:'🗃️ 任務卡', tabTimeline:'📅 時間軸', tabAll:'🗂 全部任務', tabDone:'✅ 已完成',
     titleCards:'任務卡', titleTimeline:'時間軸', titleAll:'全部任務', titleDone:'已完成任務',
     thTask:'任務', thCourse:'課程', thType:'類型', thDue:'截止時間', thRemain:'剩餘', thUrgency:'緊急度', thSource:'來源',
@@ -2518,7 +2518,7 @@ const I18N = {
     step1:'① 取得日曆連結（在 Canvas 操作一次）', step1Note:'Canvas → 日曆 → 「Calendar Feed」→ 複製 webcal://… 訂閱網址',
     step2:'② 貼上連結並匯入', feedPh:'webcal://school.instructure.com/feeds/calendars/...', goImport:'匯入',
     step3:'③ 進階：直接貼上 / 上傳 .ics 內容', sampleIcs:'貼上範例 ICS', uploadIcs:'選擇 .ics 檔案', parseIcs:'解析並匯入',
-    accTitle:'👤 帳號與截止提醒', accDesc:'綁定信箱，並選擇截止提醒的接收方式', accMail:'📧 信箱綁定', accMailPh:'you@example.edu',
+    accTitle:'👤 個人資料與截止提醒', accDesc:'綁定信箱，並選擇截止提醒的接收方式', accMail:'📧 信箱綁定', accMailPh:'you@example.edu',
     sendCode:'發送驗證碼', bind:'綁定', unbind:'解除', stateUnbound:'未綁定（可選）',
     notifyTitle:'🔔 截止提醒', leadLabel:'剩餘時間不足多少時提醒', lead24:'1 天（24 小時）', lead12:'12 小時', lead6:'6 小時', lead1:'1 小時',
     chLabel:'提醒管道', webCh:'網頁內提醒', emailCh:'信箱提醒', notifyOn:'開啟截止提醒',
@@ -2528,7 +2528,7 @@ const I18N = {
     stateBound:'已綁定', editCanvasNote:'Canvas 任務：手動編輯後，重新同步時不會被覆蓋（正式桌面版會保留你的修改）。'
   },
   'ja': {
-    import:'Canvas から取り込み', courses:'🎨 科目管理', addTask:'＋ 新規タスク', account:'👤 アカウント',
+    import:'Canvas から取り込み', courses:'🎨 科目管理', addTask:'＋ 新規タスク', account:'👤 プロフィール',
     tabCards:'🗃️ タスクカード', tabTimeline:'📅 タイムライン', tabAll:'🗂 全タスク', tabDone:'✅ 完了',
     titleCards:'タスクカード', titleTimeline:'タイムライン', titleAll:'全タスク', titleDone:'完了タスク',
     thTask:'タスク', thCourse:'科目', thType:'種別', thDue:'締切', thRemain:'残り', thUrgency:'緊急度', thSource:'出所',
@@ -2548,7 +2548,7 @@ const I18N = {
     step1:'① カレンダーリンクを取得（Canvas で一度だけ）', step1Note:'Canvas → カレンダー → 「Calendar Feed」→ webcal://… URL をコピー',
     step2:'② リンクを貼り付けて取り込み', feedPh:'webcal://school.instructure.com/feeds/calendars/...', goImport:'取り込み',
     step3:'③ 上級：.ics を貼付け / アップロード', sampleIcs:'サンプル ICS を貼る', uploadIcs:'.ics を選択', parseIcs:'解析して取り込み',
-    accTitle:'👤 アカウントと通知', accDesc:'メールを登録し、締切通知の受け取り方を選択', accMail:'📧 メールアドレス', accMailPh:'you@example.edu',
+    accTitle:'👤 プロフィールと通知', accDesc:'メールを登録し、締切通知の受け取り方を選択', accMail:'📧 メールアドレス', accMailPh:'you@example.edu',
     sendCode:'コード送信', bind:'登録', unbind:'解除', stateUnbound:'未登録（任意）',
     notifyTitle:'🔔 締切通知', leadLabel:'残りがこれ以下の時', lead24:'1日（24時間）', lead12:'12時間', lead6:'6時間', lead1:'1時間',
     chLabel:'通知方法', webCh:'アプリ内通知', emailCh:'メール', notifyOn:'締切通知を有効にする',
@@ -2558,7 +2558,7 @@ const I18N = {
     stateBound:'登録済み', editCanvasNote:'Canvas タスク：手動編集後も再同期では上書きされません（正式版では変更が保持されます）。'
   },
   'en': {
-    import:'Import Canvas', courses:'🎨 Courses', addTask:'＋ New Task', account:'👤 Account',
+    import:'Import Canvas', courses:'🎨 Courses', addTask:'＋ New Task', account:'👤 Profile',
     tabCards:'🗃️ Task Cards', tabTimeline:'📅 Timeline', tabAll:'🗂 All Tasks', tabDone:'✅ Completed',
     titleCards:'Task Cards', titleTimeline:'Timeline', titleAll:'All Tasks', titleDone:'Completed Tasks',
     thTask:'Task', thCourse:'Course', thType:'Tag', thDue:'Due', thRemain:'Left', thUrgency:'Urgency', thSource:'Source',
@@ -2578,7 +2578,7 @@ const I18N = {
     step1:'① Get the calendar link (once, in Canvas)', step1Note:'Canvas → Calendar → "Calendar Feed" → copy the webcal://… URL',
     step2:'② Paste the link and import', feedPh:'webcal://school.instructure.com/feeds/calendars/...', goImport:'Import',
     step3:'③ Advanced: paste / upload a .ics file', sampleIcs:'Paste sample ICS', uploadIcs:'Choose .ics file', parseIcs:'Parse & import',
-    accTitle:'👤 Account & Reminders', accDesc:'Bind your email and choose how to get deadline reminders', accMail:'📧 Email account', accMailPh:'you@example.edu',
+    accTitle:'👤 Profile & Reminders', accDesc:'Bind your email and choose how to get deadline reminders', accMail:'📧 Email account', accMailPh:'you@example.edu',
     sendCode:'Send code', bind:'Bind', unbind:'Unlink', stateUnbound:'Not linked (optional)',
     notifyTitle:'🔔 Deadline reminders', leadLabel:'Remind when less than', lead24:'1 day (24 h)', lead12:'12 hours', lead6:'6 hours', lead1:'1 hour',
     chLabel:'Channels', webCh:'In-app notification', emailCh:'Email', notifyOn:'Enable deadline reminders',
@@ -2588,7 +2588,7 @@ const I18N = {
     stateBound:'Linked', editCanvasNote:'Canvas task: manual edits are kept after re-sync (preserved in the full version).'
   },
   'es': {
-    import:'Importar Canvas', courses:'🎨 Cursos', addTask:'＋ Nueva tarea', account:'👤 Cuenta',
+    import:'Importar Canvas', courses:'🎨 Cursos', addTask:'＋ Nueva tarea', account:'👤 Perfil',
     tabCards:'🗃️ Tarjetas', tabTimeline:'📅 Cronología', tabAll:'🗂 Todas', tabDone:'✅ Completadas',
     titleCards:'Tarjetas de tarea', titleTimeline:'Cronología', titleAll:'Todas las tareas', titleDone:'Tareas completadas',
     thTask:'Tarea', thCourse:'Curso', thType:'Etiqueta', thDue:'Fecha', thRemain:'Restante', thUrgency:'Urgencia', thSource:'Origen',
@@ -2608,7 +2608,7 @@ const I18N = {
     step1:'① Obtener el enlace del calendario (una vez, en Canvas)', step1Note:'Canvas → Calendario → «Calendar Feed» → copia el webcal://…',
     step2:'② Pega el enlace e importa', feedPh:'webcal://school.instructure.com/feeds/calendars/...', goImport:'Importar',
     step3:'③ Avanzado: pega / sube un .ics', sampleIcs:'Pegar ICS de ejemplo', uploadIcs:'Elegir archivo .ics', parseIcs:'Procesar e importar',
-    accTitle:'👤 Cuenta y recordatorios', accDesc:'Vincula tu correo y elige cómo recibir avisos de fecha límite', accMail:'📧 Correo', accMailPh:'you@example.edu',
+    accTitle:'👤 Perfil y recordatorios', accDesc:'Vincula tu correo y elige cómo recibir avisos de fecha límite', accMail:'📧 Correo', accMailPh:'you@example.edu',
     sendCode:'Enviar código', bind:'Vincular', unbind:'Desvincular', stateUnbound:'Sin vincular (opcional)',
     notifyTitle:'🔔 Recordatorios', leadLabel:'Avisar cuando quede menos de', lead24:'1 día (24 h)', lead12:'12 horas', lead6:'6 horas', lead1:'1 hora',
     chLabel:'Canales', webCh:'Aviso en la app', emailCh:'Correo', notifyOn:'Activar recordatorios',
@@ -2623,11 +2623,11 @@ Object.assign(I18N['zh-TW'], { lgAuto:'按剩餘時間自動：', lgOk:'充裕�
 Object.assign(I18N['ja'], { lgAuto:'残り時間で自動判定：', lgOk:'余裕（7日超）', lgNear:'近い（7日以内）', lgUrg:'緊急（48h以内）', lgOver:'期限超過', lgDone:'完了', lgMan:'手動優先度（自動を上書き）：', lgUrgent:'緊急', lgHigh:'高', lgMid:'中', lgLow:'低' });
 Object.assign(I18N['en'], { lgAuto:'Auto by time left:', lgOk:'Plenty (>7d)', lgNear:'Soon (≤7d)', lgUrg:'Urgent (≤48h)', lgOver:'Overdue', lgDone:'Completed', lgMan:'Manual priority (overrides auto):', lgUrgent:'Urgent', lgHigh:'High', lgMid:'Medium', lgLow:'Low' });
 Object.assign(I18N['es'], { lgAuto:'Auto según tiempo:', lgOk:'Sobra (>7 d)', lgNear:'Pronto (≤7 d)', lgUrg:'Urgente (≤48 h)', lgOver:'Vencidas', lgDone:'Completadas', lgMan:'Prioridad manual (anula auto):', lgUrgent:'Urgente', lgHigh:'Alto', lgMid:'Medio', lgLow:'Bajo' });
-Object.assign(I18N['zh-CN'], { account:'👤 账户', accTitle:'👤 账户与截止提醒', langLabel:'语言 / Language', themeTitle:'🎨 背景颜色', themeCustom:'自定义颜色', themeReset:'恢复默认' });
-Object.assign(I18N['zh-TW'], { account:'👤 帳戶', accTitle:'👤 帳戶與截止提醒', langLabel:'語言 / Language', themeTitle:'🎨 背景顏色', themeCustom:'自訂顏色', themeReset:'恢復預設' });
-Object.assign(I18N['ja'], { account:'👤 アカウント', accTitle:'👤 アカウントと通知', langLabel:'言語 / Language', themeTitle:'🎨 背景色', themeCustom:'カスタム色', themeReset:'デフォルトに戻す' });
-Object.assign(I18N['en'], { account:'👤 Account', accTitle:'👤 Account & Settings', langLabel:'Language', themeTitle:'🎨 Background color', themeCustom:'Custom color', themeReset:'Reset to default' });
-Object.assign(I18N['es'], { account:'👤 Cuenta', accTitle:'👤 Cuenta y ajustes', langLabel:'Idioma', themeTitle:'🎨 Color de fondo', themeCustom:'Color personalizado', themeReset:'Restablecer' });
+Object.assign(I18N['zh-CN'], { account:'👤 个人资料', accTitle:'👤 个人资料与截止提醒', langLabel:'语言 / Language', themeTitle:'🎨 背景颜色', themeCustom:'自定义颜色', themeReset:'恢复默认' });
+Object.assign(I18N['zh-TW'], { account:'👤 個人資料', accTitle:'👤 個人資料與截止提醒', langLabel:'語言 / Language', themeTitle:'🎨 背景顏色', themeCustom:'自訂顏色', themeReset:'恢復預設' });
+Object.assign(I18N['ja'], { account:'👤 プロフィール', accTitle:'👤 プロフィールと通知', langLabel:'言語 / Language', themeTitle:'🎨 背景色', themeCustom:'カスタム色', themeReset:'デフォルトに戻す' });
+Object.assign(I18N['en'], { account:'👤 Profile', accTitle:'👤 Profile & Settings', langLabel:'Language', themeTitle:'🎨 Background color', themeCustom:'Custom color', themeReset:'Reset to default' });
+Object.assign(I18N['es'], { account:'👤 Perfil', accTitle:'👤 Perfil y ajustes', langLabel:'Idioma', themeTitle:'🎨 Color de fondo', themeCustom:'Color personalizado', themeReset:'Restablecer' });
 Object.assign(I18N['zh-CN'], { themeAuto:'跟随系统' });
 Object.assign(I18N['zh-TW'], { themeAuto:'跟隨系統' });
 Object.assign(I18N['ja'], { themeAuto:'システムに従う' });

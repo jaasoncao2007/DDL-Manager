@@ -7,3 +7,8 @@ dist/
 node_modules/
 
 dist-windows/
+
+# 本地构建产物，不提交
+*.exe
+*.zip
+dist-send/

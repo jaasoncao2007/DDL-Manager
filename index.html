@@ -766,6 +766,11 @@
         <button class="btn small" id="themeReset" data-i18n="themeAuto"></button>
       </div>
     </div>
+    <div class="sub-block" id="updBlock">
+      <h3 data-i18n="updTitle">🔄 软件更新</h3>
+      <div class="mini-note" id="updStatus"></div>
+      <div class="mini"><button class="btn" id="btnCheckUpdate" data-i18n="updCheck"></button></div>
+    </div>
     <div class="modal-actions"><button class="btn" id="accountClose" data-i18n="close"></button></div>
   </div>
 </div>
@@ -1837,6 +1842,8 @@ function bind(){
   };
   ['notifyOn','notifyWeb','notifyEmail','notifyLead'].forEach(id => $('#'+id).addEventListener('change', onNotifyChange));
   $('#notifyTest').addEventListener('click', () => { notified.clear(); showDueNotifications(true); });
+  const btnCheckUpdate = $('#btnCheckUpdate');
+  if (btnCheckUpdate) btnCheckUpdate.addEventListener('click', () => checkForUpdates(true));
   document.querySelectorAll('.overlay').forEach(ov => ov.addEventListener('click', e => { if (e.target === ov) ov.classList.remove('show'); }));
 
   function gotoView(v){
@@ -2664,6 +2671,11 @@ Object.assign(I18N['zh-TW'], { verLabel:'此版本：' });
 Object.assign(I18N['ja'], { verLabel:'バージョン：' });
 Object.assign(I18N['en'], { verLabel:'Version: ' });
 Object.assign(I18N['es'], { verLabel:'Versión: ' });
+Object.assign(I18N['zh-CN'], { updTitle:'🔄 软件更新', updCheck:'检查更新', updChecking:'正在检查更新…', updLatest:'已是最新版本（v{ver}）', updErr:'检查更新失败，请检查网络后重试' });
+Object.assign(I18N['zh-TW'], { updTitle:'🔄 軟體更新', updCheck:'檢查更新', updChecking:'正在檢查更新…', updLatest:'已是最新版本（v{ver}）', updErr:'檢查更新失敗，請檢查網路後重試' });
+Object.assign(I18N['ja'], { updTitle:'🔄 ソフトウェア更新', updCheck:'更新を確認', updChecking:'更新を確認中…', updLatest:'最新バージョンです（v{ver}）', updErr:'更新の確認に失敗しました。ネットワークをご確認ください' });
+Object.assign(I18N['en'], { updTitle:'🔄 Software Update', updCheck:'Check for updates', updChecking:'Checking for updates…', updLatest:'You are up to date (v{ver})', updErr:'Update check failed — check your connection and try again' });
+Object.assign(I18N['es'], { updTitle:'🔄 Actualización de software', updCheck:'Buscar actualizaciones', updChecking:'Buscando actualizaciones…', updLatest:'Ya tienes la última versión (v{ver})', updErr:'Error al buscar actualizaciones: comprueba tu conexión' });
 Object.assign(I18N['zh-CN'], { searchCards:'🔍 搜索任务卡（标题 / 课程 / 类型 / 备注）…', notFound:'未找到相关任务' });
 Object.assign(I18N['zh-TW'], { searchCards:'🔍 搜尋任務卡（標題 / 課程 / 類型 / 備註）…', notFound:'未找到相關任務' });
 Object.assign(I18N['ja'], { searchCards:'🔍 タスクを検索（タイトル / 科目 / タグ / メモ）…', notFound:'該当するタスクが見つかりません' });
@@ -2710,7 +2722,7 @@ Object.assign(I18N['ja'], { updFound:'新しいバージョンがあります', 
 Object.assign(I18N['en'], { updFound:'Update available', updClick:'Click this notice to update', updInstalling:'Downloading & installing…', updDone:'Installed — please restart the app', updFailed:'Update failed' });
 Object.assign(I18N['es'], { updFound:'Actualización disponible', updClick:'Haz clic en este aviso para actualizar', updInstalling:'Descargando e instalando…', updDone:'Instalado: reinicia la app', updFailed:'Error al actualizar' });
 let LANG = 'zh-CN';
-const APP_VERSION = '1.0.1';
+const APP_VERSION = '1.0.2';
 function t(key){
   const d = I18N[LANG] || I18N['zh-CN'];
   return (d && d[key] !== undefined) ? d[key] : ((I18N['zh-CN'] && I18N['zh-CN'][key] !== undefined) ? I18N['zh-CN'][key] : key);
@@ -2870,30 +2882,61 @@ applyBg(account.bg || '#f3f5fa', false);
 initClock();
 refreshCourseOptions();
 try { bind(); } catch(e){ console.error(e); }
-/* 桌面版：自动更新提示 */
-(function(){
-  if (!(window.__TAURI__ && window.__TAURI__.event && window.__TAURI__.core)) return;
-  const listen = window.__TAURI__.event.listen;
-  const invoke = window.__TAURI__.core.invoke;
-  listen('update-available', e => {
-    const box = $('#toasts');
-    if (!box) return;
-    const el = document.createElement('div');
-    el.className = 'toast warn';
-    el.innerHTML = `<h4>🔄 ${t('updFound')} v${escapeHtml(String(e.payload))}</h4><p>${t('updClick')}</p>`;
-    box.appendChild(el);
-    el.addEventListener('click', async () => {
-      try {
-        el.innerHTML = `<h4>⬇️ ${t('updInstalling')}</h4>`;
-        await invoke('install_update');
-        el.innerHTML = `<h4>✅ ${t('updDone')}</h4>`;
-      } catch(err){
-        el.innerHTML = `<h4>❌ ${t('updFailed')}: ${escapeHtml(String(err))}</h4>`;
-      }
-      setTimeout(() => { if (el.parentNode) el.remove(); }, 6000);
-    });
-    setTimeout(() => { if (el.parentNode){ el.classList.add('hide'); setTimeout(() => el.remove(), 260); } }, 30000);
+if (!isTauriApp()){ const ub = $('#updBlock'); if (ub) ub.style.display = 'none'; }
+/* 桌面版：自动更新提示。
+   机制：界面就绪后由前端主动检查（避免启动过早、事件丢失），
+   每 30 分钟复查一次；收到 Rust 事件或手动点“检查更新”也会提示。 */
+function isTauriApp(){
+  return !!(window.__TAURI__ && window.__TAURI__.core && window.__TAURI__.core.invoke);
+}
+let _updEvtBound = false;
+function updToast(version){
+  const box = $('#toasts');
+  if (!box) return;
+  const el = document.createElement('div');
+  el.className = 'toast warn';
+  el.innerHTML = `<h4>🔄 ${t('updFound')} v${escapeHtml(String(version))}</h4><p>${t('updClick')}</p>`;
+  box.appendChild(el);
+  el.addEventListener('click', async () => {
+    try {
+      el.innerHTML = `<h4>⬇️ ${t('updInstalling')}</h4>`;
+      await window.__TAURI__.core.invoke('install_update');
+      el.innerHTML = `<h4>✅ ${t('updDone')}</h4>`;
+    } catch(err){
+      el.innerHTML = `<h4>❌ ${t('updFailed')}: ${escapeHtml(String(err))}</h4>`;
+    }
+    setTimeout(() => { if (el.parentNode) el.remove(); }, 6000);
   });
+  setTimeout(() => { if (el.parentNode){ el.classList.add('hide'); setTimeout(() => el.remove(), 260); } }, 30000);
+}
+function updStatus(msg){
+  const s = $('#updStatus');
+  if (s) s.textContent = msg || '';
+}
+async function checkForUpdates(manual){
+  if (!isTauriApp()){ updStatus(''); return; }
+  if (manual) updStatus('⏳ ' + t('updChecking'));
+  try {
+    const ver = await window.__TAURI__.core.invoke('check_for_update');
+    if (ver){
+      updToast(ver);
+      if (manual) updStatus('🔄 ' + t('updFound') + ' v' + escapeHtml(String(ver)) + ' · ' + t('updClick'));
+    } else {
+      if (manual) updStatus('✅ ' + t('updLatest').replace('{ver}', APP_VERSION));
+    }
+  } catch(err){
+    console.warn('update check failed:', err);
+    if (manual) updStatus('❌ ' + t('updErr'));
+  }
+}
+(function(){
+  if (!isTauriApp()) return;
+  if (!_updEvtBound && window.__TAURI__.event && window.__TAURI__.event.listen){
+    _updEvtBound = true;
+    window.__TAURI__.event.listen('update-available', e => updToast(e.payload));
+  }
+  setTimeout(() => checkForUpdates(false), 2500);          // 启动后等界面就绪再查
+  setInterval(() => checkForUpdates(false), 30*60*1000);  // 每 30 分钟复查
 })();
 applyLang(lsGet('ddl-lang') || 'zh-CN');
 const verEl = document.getElementById('appVer');

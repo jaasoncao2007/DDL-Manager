@@ -1,5 +1,4 @@
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
-use tauri::Emitter;
 use tauri_plugin_updater::UpdaterExt;
 
 #[tauri::command]
@@ -64,18 +63,6 @@ pub fn run() {
             check_for_update,
             install_update
         ])
-        .setup(|app| {
-            // 启动后静默检查更新，有新版本则通知前端弹提示
-            let h = app.handle().clone();
-            tauri::async_runtime::spawn(async move {
-                if let Ok(updater) = h.updater() {
-                    if let Ok(Some(update)) = updater.check().await {
-                        let _ = h.emit("update-available", update.version.to_string());
-                    }
-                }
-            });
-            Ok(())
-        })
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

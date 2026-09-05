@@ -701,10 +701,11 @@
       <div class="row2">
         <div class="field"><label data-i18n="cleanDaysLabel">保留天数</label>
           <select id="cleanDays">
-            <option value="7">7</option>
-            <option value="14">14</option>
             <option value="30">30</option>
-            <option value="90">90</option>
+            <option value="14">14</option>
+            <option value="7">7</option>
+            <option value="3">3</option>
+            <option value="1">1</option>
           </select>
         </div>
         <div class="field" style="display:flex;align-items:flex-end">
@@ -931,8 +932,6 @@ function toggleDone(id){
   const t = state.tasks.find(x => x.id === id);
   if (t) {
     t.status = t.status === 'done' ? 'open' : 'done';
-    if (t.status === 'done') t.doneAt = Date.now();
-    else delete t.doneAt;
     save(); renderAllViews();
   }
 }
@@ -1812,13 +1811,13 @@ function bind(){
   if (acOn) acOn.addEventListener('change', () => {
     account.autoClean = acOn.checked;
     saveAccount();
-    autoCleanDone();
+    autoCleanOverdue();
     refreshAccountUI();
   });
   if (acDays) acDays.addEventListener('change', () => {
     account.cleanDays = parseInt(acDays.value, 10) || 30;
     saveAccount();
-    autoCleanDone();
+    autoCleanOverdue();
   });
   $('#ovAccount').addEventListener('click', e => {
     const un = e.target.closest('[data-un]');
@@ -1916,7 +1915,7 @@ function bind(){
     const id = card.dataset.id;
     if (btn.dataset.act === 'done'){
       const t = state.tasks.find(x => x.id === id);
-      if (t){ t.status = 'done'; t.doneAt = Date.now(); }
+      if (t) t.status = 'done';
       save();
       card.classList.add('fading');
       setTimeout(() => {
@@ -2407,17 +2406,17 @@ function updateFeedSyncState(){
   el.innerHTML = parts.join(' &nbsp;·&nbsp; ');
   localizeDom();
 }
-/* 自动清理：删除“已完成超过保留天数”的任务 */
-function autoCleanDone(){
+/* 自动清理：删除“已逾期超过保留天数”的未完成任务（已完成不受影响） */
+function autoCleanOverdue(){
   if (!account || !account.autoClean) return;
   const cut = Date.now() - (account.cleanDays || 30) * 864e5;
   const keep = [];
   let changed = false;
   state.tasks.forEach(t => {
-    if (t.status === 'done' && t.doneAt && (+t.doneAt) < cut){ changed = true; return; }
+    if (t.status !== 'done' && new Date(t.due).getTime() < cut){ changed = true; return; }
     keep.push(t);
   });
-  if (changed){ state.tasks = keep; save(); renderDonePage(); }
+  if (changed){ state.tasks = keep; save(); renderAllViews(); }
 }
 
 /* ================= 顶栏实时时钟（跟随设备时区/定位） ================= */
@@ -2693,11 +2692,11 @@ Object.assign(I18N['zh-TW'], { sortCourse:'按課程首字母排序', sortDue:'�
 Object.assign(I18N['ja'], { sortCourse:'科目名順（A–Z）', sortDue:'締切順' });
 Object.assign(I18N['en'], { sortCourse:'Sort by course (A–Z)', sortDue:'Sort by due time' });
 Object.assign(I18N['es'], { sortCourse:'Ordenar por curso (A–Z)', sortDue:'Ordenar por fecha límite' });
-Object.assign(I18N['zh-CN'], { cleanTitle:'🧹 自动清理已完成', cleanDaysLabel:'保留天数', autoCleanOn:'自动删除完成已久的任务', cleanNote:'勾选后，已完成超过所选天数的任务会被自动删除（仅本地数据）。' });
-Object.assign(I18N['zh-TW'], { cleanTitle:'🧹 自動清理已完成', cleanDaysLabel:'保留天數', autoCleanOn:'自動刪除完成已久的任務', cleanNote:'勾選後，已完成超過所選天數的任務會被自動刪除（僅本機資料）。' });
-Object.assign(I18N['ja'], { cleanTitle:'🧹 完了タスクの自動削除', cleanDaysLabel:'保持日数', autoCleanOn:'完了から一定日数が経過したタスクを自動削除', cleanNote:'チェックすると、完了から選択した日数を超えたタスクを自動削除します（ローカルのみ）。' });
-Object.assign(I18N['en'], { cleanTitle:'🧹 Auto-clean completed', cleanDaysLabel:'Keep for (days)', autoCleanOn:'Auto-delete long-completed tasks', cleanNote:'When enabled, tasks completed longer ago than the selected days are deleted automatically (local only).' });
-Object.assign(I18N['es'], { cleanTitle:'🧹 Limpiar completadas', cleanDaysLabel:'Conservar (días)', autoCleanOn:'Borrar automáticamente tareas completadas hace tiempo', cleanNote:'Si se activa, las tareas completadas hace más de los días elegidos se borran solas (solo local).' });
+Object.assign(I18N['zh-CN'], { cleanTitle:'🧹 自动清理已逾期', cleanDaysLabel:'逾期超过多少天删除', autoCleanOn:'自动删除逾期已久的任务', cleanNote:'勾选后，未完成且逾期超过所选天数的任务会被自动删除；已完成的任务不受影响。' });
+Object.assign(I18N['zh-TW'], { cleanTitle:'🧹 自動清理已逾期', cleanDaysLabel:'逾期超過多少天刪除', autoCleanOn:'自動刪除逾期已久的任務', cleanNote:'勾選後，未完成且逾期超過所選天數的任務會被自動刪除；已完成任務不受影響。' });
+Object.assign(I18N['ja'], { cleanTitle:'🧹 期限切れタスクの自動削除', cleanDaysLabel:'超過日数で削除', autoCleanOn:'長期間期限切れのタスクを自動削除', cleanNote:'オンにすると、未完了かつ期限から選択した日数を超えたタスクを自動削除します（完了タスクは対象外）。' });
+Object.assign(I18N['en'], { cleanTitle:'🧹 Auto-clean overdue', cleanDaysLabel:'Delete when overdue >', autoCleanOn:'Auto-delete long-overdue tasks', cleanNote:'When enabled, unfinished tasks overdue by more than the selected days are deleted automatically. Completed tasks are kept.' });
+Object.assign(I18N['es'], { cleanTitle:'🧹 Limpiar vencidas', cleanDaysLabel:'Borrar si vence en >', autoCleanOn:'Borrar automáticamente tareas muy vencidas', cleanNote:'Si se activa, las tareas sin completar vencidas hace más de los días elegidos se borran solas. Las completadas se conservan.' });
 let LANG = 'zh-CN';
 function t(key){
   const d = I18N[LANG] || I18N['zh-CN'];
@@ -2843,12 +2842,12 @@ try { bind(); } catch(e){ console.error(e); }
 applyLang(lsGet('ddl-lang') || 'zh-CN');
 normalizeCanvasCourseNames();
 scheduleFeed();
-setTimeout(() => autoCleanDone(), 400);
+setTimeout(() => autoCleanOverdue(), 400);
 setTimeout(() => showDueNotifications(false), 1200);
 setInterval(() => {
   renderChips(); renderSoon(); renderAll(); renderDonePage(); renderTimeline();
   showDueNotifications(false);
-  autoCleanDone();
+  autoCleanOverdue();
   localizeDom();
 }, 60000);
 

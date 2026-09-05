@@ -92,6 +92,8 @@
   .btn.danger:hover{color:var(--danger); border-color:#f3c1c1; background:#fdf4f4;}
   .btn.ok{background:#e7f6ee; border-color:#9fd6b5; color:#15803d;}
   .btn.ok:hover{background:#16a34a; border-color:#16a34a; color:#fff;}
+  .btn.ontime{background:#fff3e0; border-color:#f2c37a; color:#b45309;}
+  .btn.ontime:hover{background:#f59e0b; border-color:#f59e0b; color:#fff;}
   .btn.edit{background:#eef1f8; border-color:#c9d2e2; color:#3f4756;}
   .btn.edit:hover{background:var(--brand); border-color:var(--brand); color:#fff;}
   .foot .btn.small, td .btn.small{min-width:70px; justify-content:center;}
@@ -285,7 +287,11 @@
   .rpanel h4{margin:0 0 10px; font-size:12.5px; color:#3f4756; font-weight:800;}
   .donut-wrap{display:flex; align-items:center; gap:16px; flex-wrap:wrap;}
   .donut{position:relative; width:132px; height:132px; border-radius:50%; flex:none; background:#e8ebf2;}
-  .donut .donut-c{position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:24px; font-weight:800; color:#3f4756;}
+  @property --sw { syntax:'<angle>'; initial-value:360deg; inherits:false; }
+  .donut{ -webkit-mask-image:conic-gradient(#000 0deg var(--sw), transparent var(--sw) 360deg); mask-image:conic-gradient(#000 0deg var(--sw), transparent var(--sw) 360deg); }
+  .donut.sweep{ animation:sweepIn 1.5s cubic-bezier(.3,.7,.3,1); }
+  @keyframes sweepIn{ from{ --sw:0deg; } to{ --sw:360deg; } }
+  .donut .donut-c{position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); width:76px; height:76px; border-radius:50%; background:var(--card); border:1px solid var(--line); box-sizing:border-box; display:flex; align-items:center; justify-content:center; font-size:22px; font-weight:800; color:#3f4756;}
   .donut-leg{display:flex; flex-direction:column; gap:6px; font-size:12px; color:var(--ink); min-width:0;}
   .donut-leg .dl{display:flex; align-items:center; gap:7px;}
   .donut-leg .dl i{width:10px; height:10px; border-radius:3px; flex:none;}
@@ -297,6 +303,8 @@
   .cbar-row .clab i{width:8px; height:8px; border-radius:50%; flex:none;}
   .cbar-area{flex:1; display:flex; align-items:center; gap:8px; min-width:0;}
   .cbar-row .ctrack{height:14px; min-width:2px; border-radius:7px; background:var(--soft); overflow:hidden; display:flex; border:1px solid var(--line);}
+  .cbar-row .ctrack.grow{ animation:cbarGrow 1.5s cubic-bezier(.22,.8,.28,1) both; }
+  @keyframes cbarGrow{ from{ width:0; } }
   .cbar-row .ctrack span{height:100%; display:block;}
   .cbar-row .cnum{flex:none; font-size:11px; color:var(--muted); font-weight:700; font-variant-numeric:tabular-nums;}
   .wline{font-size:12.5px; color:var(--ink); padding:5px 0; display:flex; justify-content:space-between; gap:10px; border-bottom:1px dashed var(--line);}
@@ -312,7 +320,13 @@
   .del-row .rsn.auto{background:#fdeaea; color:#b91c1c;}
   .del-row button{flex:none; border:1px solid var(--line); background:#fff; border-radius:7px; font-size:10.5px; padding:3px 8px; cursor:pointer; color:#5b6474;}
   .del-row button:hover{border-color:#16a34a; color:#15803d;}
+  .del-row button.purge:hover{border-color:#dc2626; color:#b91c1c; background:#fdf2f2;}
   .del-none{font-size:12px; color:var(--muted); padding:6px 2px;}
+  .arch-bar{display:flex; align-items:center; gap:8px; margin:0 0 8px; flex-wrap:wrap;}
+  .arch-selall{display:flex; align-items:center; gap:6px; font-size:12px; color:#5b6474; font-weight:600; cursor:pointer;}
+  .arch-selall input{accent-color:var(--brand); cursor:pointer;}
+  .deleted-list .del-row input.archsel{flex:none; accent-color:var(--brand); cursor:pointer; margin:0;}
+  .btn:disabled{opacity:.5; cursor:default;}
   @media (max-width:760px){ .report-grid{grid-template-columns:1fr;} }
   @media (max-width:980px){ .all-cols{grid-template-columns:1fr;} .all-done{min-height:0;} }
   /* 手机 / 窄屏适配 */
@@ -570,10 +584,10 @@
   <section class="view" id="view-report">
     <div class="section-title" data-i18n="titleReport">📊 报告</div>
     <div class="report-per" id="reportPer">
-      <button class="perb on" data-per="all" data-i18n="perAll">全部</button>
-      <button class="perb" data-per="week" data-i18n="perWeek">本周</button>
+      <button class="perb on" data-per="week" data-i18n="perWeek">本周</button>
       <button class="perb" data-per="month" data-i18n="perMonth">本月</button>
       <button class="perb" data-per="year" data-i18n="perYear">本年</button>
+      <button class="perb" data-per="all" data-i18n="perAll">全部</button>
     </div>
     <div class="report-kpis" id="reportKpis"></div>
 
@@ -604,8 +618,14 @@
     </div>
 
     <div class="rpanel">
-      <h4 data-i18n="repRecentDel">最近删除（可恢复）</h4>
+      <h4><span data-i18n="repRecentDel">最近删除（可恢复）</span><span class="cnt done-count" id="archCount">0</span></h4>
+      <div class="arch-bar">
+        <label class="arch-selall"><input type="checkbox" id="archAll"><span data-i18n="repSelPage">全选本页</span></label>
+        <button class="btn small" id="archBatchDel" data-i18n="repBatchDel" disabled>批量删除</button>
+        <button class="btn small danger" id="archClear" data-i18n="repClearAll">一键删除全部</button>
+      </div>
       <div class="deleted-list" id="reportDelList"></div>
+      <div class="pager" id="pagerArch"></div>
     </div>
   </section>
 </main>
@@ -1105,6 +1125,14 @@ function restoreArchive(id){
   saveArchive(); save(); refreshCourseOptions(); renderAllViews();
   showToast(t('repRestored'), '', 'ok');
 }
+function purgeArchive(id){
+  const i = archive.findIndex(a => a.id === id);
+  if (i < 0) return;
+  archive.splice(i, 1);
+  saveArchive();
+  renderAllViews();
+  showToast(t('repPurged'), '', 'ok');
+}
 function updateBatchBar(){
   const bar = $('#batchBar');
   if (!bar) return;
@@ -1153,8 +1181,9 @@ function renderChips(){
   const opens = state.tasks.filter(t => t.status !== 'done');
   const weekStart = mondayOf(now), weekEnd = new Date(weekStart.getTime() + WEEK);
   const over = opens.filter(t => t.due < now).length;
-  const in3 = opens.filter(t => t.due >= now && t.due < new Date(now.getTime() + 3*DAY)).length;
-  const inWeek = opens.filter(t => t.due >= now && t.due < weekEnd).length;
+  const d3End = new Date(now.getTime() + 3*DAY);
+  const in3 = opens.filter(t => t.due >= now && t.due < d3End).length;
+  const inWeek = opens.filter(t => t.due >= d3End && t.due < weekEnd).length;
   $('#chips').innerHTML =
     chip('🚨', over, t('chipOver'), 'over', 'over') +
     chip('⏳', in3, t('chip3d'), 'danger', 'd3') +
@@ -1177,6 +1206,7 @@ function cardHtml(task){
     <div class="foot" style="border-left:4px solid ${color};padding-left:10px;margin-left:-4px">
       <span></span>
       <div style="display:flex;gap:6px">
+        ${new Date(task.due).getTime() < Date.now() ? `<button class="btn small ontime" data-act="ontime" title="${t('btnOntime')}">${t('btnOntime')}</button>` : ''}
         <button class="btn small edit" data-act="edit">${t('btnEdit')}</button>
         <button class="btn small ok" data-act="done" title="点击标记完成">${t('btnDone')}</button>
       </div>
@@ -1186,6 +1216,8 @@ function cardHtml(task){
 function renderSoon(){
   const now = new Date();
   const weekEnd = new Date(mondayOf(now).getTime() + WEEK);
+  const d3End = new Date(now.getTime() + 3 * DAY);
+  const laterStart = (weekEnd > d3End) ? weekEnd : d3End;   // 避免与“3天内”重叠
   const q = ($('#searchSoon') ? $('#searchSoon').value : '').trim().toLowerCase();
   const hasAnyOpen = state.tasks.some(t => t.status !== 'done');
   let opens = state.tasks.filter(t => t.status !== 'done');
@@ -1200,9 +1232,9 @@ function renderSoon(){
   }
   const groups = [
     { key:'over',  name: t('gOver'),  dot:'#b91c1c', test: x => x.due < now },
-    { key:'d3',    name: t('g3'),  dot:'#ea580c', test: x => x.due >= now && x.due < new Date(now.getTime() + 3*DAY) },
-    { key:'week',  name: t('gWeek'),  dot:'#d97706', test: x => x.due >= new Date(now.getTime() + 3*DAY) && x.due < weekEnd },
-    { key:'later', name: t('gLater'), dot:'#16a34a', test: x => x.due >= weekEnd }
+    { key:'d3',    name: t('g3'),  dot:'#ea580c', test: x => x.due >= now && x.due < d3End },
+    { key:'week',  name: t('gWeek'),  dot:'#d97706', test: x => x.due >= d3End && x.due < weekEnd },
+    { key:'later', name: t('gLater'), dot:'#16a34a', test: x => x.due >= laterStart }
   ];
   const listOf = g => opens.filter(g.test).sort((a,b) => taskCompare(a, b, now));
   const only = soonOnly ? groups.find(g => g.key === soonOnly) : null;
@@ -1640,9 +1672,9 @@ function renderDonePage(){
 }
 
 /* ============ 报告页：任务生命周期统计 ============ */
-let reportPeriod = 'all';
+let reportPeriod = 'week';
 try { const rp = lsGet('ddl-report-per'); if (rp) reportPeriod = rp; } catch(e){}
-const REP_C_OPEN = '#3b82f6', REP_C_DONE = '#16a34a', REP_C_LATE = '#f59e0b', REP_C_DEL = '#9aa3b2';
+const REP_C_OPEN = '#3b82f6', REP_C_DONE = '#22c55e', REP_C_LATE = '#f59e0b', REP_C_DEL = '#9aa3b2';
 function reportRange(per){
   const now = new Date();
   if (per === 'week'){ const s = mondayOf(now); return { s, e: new Date(s.getTime() + WEEK) }; }
@@ -1670,6 +1702,14 @@ function reportCounts(){
     if (per === 'all' && !t.doneAt){ doneOn++; return; }   // 早期完成：按“准时完成”归入
     if (new Date(t.doneAt).getTime() <= new Date(t.due).getTime()) doneOn++; else doneLate++;
   });
+  // 逾期被自动清理的任务：视为“准时完成”，完成时间按其 DDL 计算，再归入 本周/本月/本年（手动删除的不算）
+  archive.forEach(a => {
+    if (a.reason !== 'auto') return;
+    const eligible = (per === 'all') ? true : inRange(a.due, r);
+    if (!eligible) return;
+    doneOn++;
+    doneH += (+a.hours || 0);
+  });
   const doneN = doneOn + doneLate;
   let delN = 0, delH = 0;
   archive.forEach(a => { if (per === 'all' || inRange(a.deletedAt, r)){ delN++; delH += (+a.hours || 0); } });
@@ -1685,7 +1725,7 @@ function reportCourses(cnt){
     if (!n) return;
     name = name || '未知';
     const k = name;
-    if (!map[k]) map[k] = { name, color, open: 0, done: 0, del: 0 };
+    if (!map[k]) map[k] = { name, color, open: 0, done: 0 };
     map[k][key] += n;
   };
   state.tasks.forEach(t => {
@@ -1696,9 +1736,11 @@ function reportCourses(cnt){
     } else if (cnt.per === 'all' || (t.doneAt && inRange(t.doneAt, cnt.r))) push(c.name, c.color || '#64748b', 'done', 1);
   });
   archive.forEach(a => {
-    if (cnt.per === 'all' || inRange(a.deletedAt, cnt.r)) push(a.courseName, colorByName(a.courseName), 'del', 1);
+    if (a.reason !== 'auto') return;
+    if (cnt.per !== 'all' && !inRange(a.due, cnt.r)) return;
+    push(a.courseName, colorByName(a.courseName), 'done', 1);
   });
-  return Object.values(map).sort((a,b) => (b.open + b.done + b.del) - (a.open + a.done + a.del));
+  return Object.values(map).sort((a,b) => (b.open + b.done) - (a.open + a.done));
 }
 function renderNext7Box(){
   const now = Date.now(), end = now + 7 * DAY;
@@ -1722,16 +1764,15 @@ function renderReport(){
   if (kpi) kpi.innerHTML =
     `<div class="kpi-card"><div class="k-num" style="color:${REP_C_OPEN}">${cnt.openN}</div><div class="k-lab">${t('repOpen')}</div></div>` +
     `<div class="kpi-card"><div class="k-num" style="color:${REP_C_DONE}">${cnt.doneN}</div><div class="k-lab">${t('repDone')}</div></div>` +
-    `<div class="kpi-card"><div class="k-num" style="color:${REP_C_DEL}">${cnt.delN}</div><div class="k-lab">${t('repDel')}</div></div>` +
     `<div class="kpi-card ov"><div class="k-num">${cnt.overdueN}</div><div class="k-lab">${t('repOver')}</div></div>`;
-  // 环形图（进行中 / 准时完成 / 逾期完成 / 已删除）
-  const total = cnt.openN + cnt.doneOn + cnt.doneLate + cnt.delN;
+  // 环形图（进行中 / 准时完成 / 逾期完成）
+  const total = cnt.openN + cnt.doneOn + cnt.doneLate;
   const donut = $('#reportDonut'), dc = $('#reportDonutC'), leg = $('#reportDonutLeg'), en = $('#reportEmptyNote');
   if (donut){
     if (total){
       let acc = 0; const segs = [];
       const add = (n, c) => { if (!n) return; const p = (n / total) * 360; segs.push(`${c} ${acc}deg ${acc + p}deg`); acc += p; };
-      add(cnt.openN, REP_C_OPEN); add(cnt.doneOn, REP_C_DONE); add(cnt.doneLate, REP_C_LATE); add(cnt.delN, REP_C_DEL);
+      add(cnt.openN, REP_C_OPEN); add(cnt.doneOn, REP_C_DONE); add(cnt.doneLate, REP_C_LATE);
       donut.style.background = `conic-gradient(${segs.join(',')})`;
     } else {
       donut.style.background = '#e8ebf2';
@@ -1743,8 +1784,7 @@ function renderReport(){
     leg.innerHTML =
       `<div class="dl"><i style="background:${REP_C_OPEN}"></i><span>${t('repOpen')}</span><b>${cnt.openN} · ${pct(cnt.openN)}%</b></div>` +
       `<div class="dl"><i style="background:${REP_C_DONE}"></i><span>${t('repOnTime')}</span><b>${cnt.doneOn} · ${pct(cnt.doneOn)}%</b></div>` +
-      `<div class="dl"><i style="background:${REP_C_LATE}"></i><span>${t('repLate')}</span><b>${cnt.doneLate} · ${pct(cnt.doneLate)}%</b></div>` +
-      `<div class="dl"><i style="background:${REP_C_DEL}"></i><span>${t('repDel')}</span><b>${cnt.delN} · ${pct(cnt.delN)}%</b></div>`;
+      `<div class="dl"><i style="background:${REP_C_LATE}"></i><span>${t('repLate')}</span><b>${cnt.doneLate} · ${pct(cnt.doneLate)}%</b></div>`;
   }
   if (en) en.textContent = total ? '' : t('repEmpty');
   // 课程堆叠条
@@ -1753,14 +1793,14 @@ function renderReport(){
     const rows = reportCourses(cnt);
     if (!rows.length){ cb.innerHTML = `<div class="del-none">${t('repEmpty')}</div>`; }
     else {
-      const maxTotal = Math.max.apply(null, rows.map(r => r.open + r.done + r.del));
+      const maxTotal = Math.max.apply(null, rows.map(r => r.open + r.done));
       cb.innerHTML = rows.map(row => {
-        const sum = row.open + row.done + row.del;
+        const sum = row.open + row.done;
         const pct = maxTotal ? Math.max((sum / maxTotal) * 100, 2) : 100;
         const seg = (n, c) => n ? `<span style="width:${(n / sum * 100).toFixed(1)}%;background:${c}"></span>` : '';
         return `<div class="cbar-row">
           <div class="clab"><i style="background:${row.color}"></i><span title="${escapeHtml(row.name)}">${escapeHtml(row.name)}</span></div>
-          <div class="cbar-area"><div class="ctrack" style="width:${pct.toFixed(1)}%">${seg(row.open, REP_C_OPEN)}${seg(row.done, REP_C_DONE)}${seg(row.del, REP_C_DEL)}</div></div>
+          <div class="cbar-area"><div class="ctrack" style="width:${pct.toFixed(1)}%">${seg(row.open, REP_C_OPEN)}${seg(row.done, REP_C_DONE)}</div></div>
           <div class="cnum">${sum}</div>
         </div>`;
       }).join('');
@@ -1771,27 +1811,88 @@ function renderReport(){
   if (wb) wb.innerHTML =
     `<div class="wline"><span>${t('repOpen')}</span><b>${cnt.openN} · ≈ ${cnt.openH} ${t('repHours')}</b></div>` +
     `<div class="wline"><span>${t('repDone')}</span><b>${cnt.doneN} · ≈ ${cnt.doneH} ${t('repHours')}</b></div>` +
-    `<div class="wline"><span>${t('repDel')}</span><b>${cnt.delN} · ≈ ${cnt.delH} ${t('repHours')}</b></div>` +
     (cnt.overdueH ? `<div class="wline" style="color:#b91c1c"><span>${t('repOver')}</span><b>${cnt.overdueN} · ≈ ${cnt.overdueH} ${t('repHours')}</b></div>` : '');
   renderNext7Box();
-  // 最近删除
-  const dl = $('#reportDelList');
-  if (dl){
-    if (!archive.length){ dl.innerHTML = `<div class="del-none">${t('repNoDel')}</div>`; }
-    else {
-      const list = archive.slice().sort((a,b) => b.deletedAt - a.deletedAt).slice(0, 15);
-      dl.innerHTML = list.map(a => {
-        const c = state.courses.find(x => x.id === a.courseId) || state.courses.find(x => x.name === a.courseName) || {};
-        const when = a.deletedAt ? fmtDate(new Date(a.deletedAt)) : '';
-        return `<div class="del-row" data-id="${a.id}">
-          <i class="dd" style="background:${c.color || '#9aa3b2'}"></i>
-          <div class="dt"><b>${escapeHtml(a.title)}</b><span>${escapeHtml(a.courseName || '')} · ${when}</span></div>
-          <span class="rsn${a.reason === 'auto' ? ' auto' : ''}">${a.reason === 'auto' ? t('repDelAuto') : t('repDelManual')}</span>
-          <button data-restore="${a.id}">${t('repRestore')}</button>
-        </div>`;
-      }).join('');
-    }
+  // 最近删除（分页 + 多选批量 / 一键删除）
+  renderDeletedList();
+}
+let archPage = 1;
+const archSel = new Set();
+function archSorted(){ return archive.slice().sort((a,b) => b.deletedAt - a.deletedAt); }
+function archPageIds(){
+  const all = archSorted();
+  return all.slice((archPage - 1) * 15, archPage * 15).map(a => a.id);
+}
+function updArchBar(){
+  const b = $('#archBatchDel');
+  if (b){
+    b.disabled = archSel.size === 0;
+    b.textContent = t('repBatchDel') + (archSel.size ? ` (${archSel.size})` : '');
   }
+  const all = $('#archAll');
+  if (all){
+    const ids = archPageIds();
+    all.checked = ids.length > 0 && ids.every(id => archSel.has(id));
+    all.indeterminate = !all.checked && ids.some(id => archSel.has(id));
+  }
+}
+function renderDeletedList(){
+  const cntEl = $('#archCount');
+  if (cntEl) cntEl.textContent = archive.length;
+  const box = $('#reportDelList'), pa = $('#pagerArch');
+  if (!box) return;
+  if (!archive.length){
+    box.innerHTML = `<div class="del-none">${t('repNoDel')}</div>`;
+    if (pa) pa.innerHTML = '';
+    archSel.clear(); updArchBar();
+    return;
+  }
+  const all = archSorted();
+  const PER = 15, total = Math.max(1, Math.ceil(all.length / PER));
+  if (archPage > total) archPage = total;
+  if (archPage < 1) archPage = 1;
+  const page = all.slice((archPage - 1) * PER, archPage * PER);
+  const valid = new Set(all.map(a => a.id));
+  archSel.forEach(id => { if (!valid.has(id)) archSel.delete(id); });
+  box.innerHTML = page.map(a => {
+    const c = state.courses.find(x => x.id === a.courseId) || state.courses.find(x => x.name === a.courseName) || {};
+    const when = a.deletedAt ? fmtDate(new Date(a.deletedAt)) : '';
+    return `<div class="del-row" data-id="${a.id}">
+      <input type="checkbox" class="archsel" data-arch="${a.id}" ${archSel.has(a.id) ? 'checked' : ''} title="select">
+      <i class="dd" style="background:${c.color || '#9aa3b2'}"></i>
+      <div class="dt"><b>${escapeHtml(a.title)}</b><span>${escapeHtml(a.courseName || '')} · ${when}</span></div>
+      <span class="rsn${a.reason === 'auto' ? ' auto' : ''}">${a.reason === 'auto' ? t('repDelAuto') : t('repDelManual')}</span>
+      <button data-restore="${a.id}">${t('repRestore')}</button>
+      <button class="purge" data-purge="${a.id}" title="${t('repPurge')}">${t('repPurge')}</button>
+    </div>`;
+  }).join('');
+  if (pa){
+    if (total > 1){
+      let ph = `<button class="pgb" data-archpg="prev"${archPage === 1 ? ' disabled' : ''}>‹</button>`;
+      const nums = [];
+      const push = n => { if (n >= 1 && n <= total && !nums.includes(n)) nums.push(n); };
+      push(1);
+      for (let i = archPage - 2; i <= archPage + 2; i++) push(i);
+      push(total);
+      nums.sort((a,b) => a - b);
+      let last = 0;
+      nums.forEach(n => { if (n - last > 1) ph += '<span class="pgdots">…</span>'; ph += `<button class="pgb${n === archPage ? ' on' : ''}" data-archpg="${n}">${n}</button>`; last = n; });
+      ph += `<button class="pgb" data-archpg="next"${archPage === total ? ' disabled' : ''}>›</button>`;
+      pa.innerHTML = ph;
+    } else pa.innerHTML = '';
+  }
+  updArchBar();
+}
+function playReportAnimations(){
+  const donut = $('#reportDonut');
+  if (donut){ donut.classList.remove('sweep'); void donut.offsetWidth; donut.classList.add('sweep'); }
+  const bars = document.querySelectorAll('#reportCourses .cbar-row .ctrack');
+  bars.forEach(el => {
+    el.classList.remove('grow');
+    el.style.animationDelay = '';
+    void el.offsetWidth;
+    el.classList.add('grow');
+  });
 }
 function escapeHtml(s){
   return String(s == null ? '' : s).replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
@@ -2162,12 +2263,63 @@ function bind(){
     reportPeriod = b.dataset.per;
     lsSet('ddl-report-per', reportPeriod);
     renderReport();
+    playReportAnimations();
   });
   const reportDelEl = $('#reportDelList');
   if (reportDelEl) reportDelEl.addEventListener('click', e => {
+    const p = e.target.closest('[data-purge]');
+    if (p){
+      const pid = p.dataset.purge;
+      openConfirm(t('repPurgeMsg'), () => purgeArchive(pid));
+      return;
+    }
     const b = e.target.closest('[data-restore]');
     if (!b) return;
     restoreArchive(b.dataset.restore);
+  });
+  if (reportDelEl) reportDelEl.addEventListener('change', e => {
+    const cb = e.target.closest('.archsel');
+    if (!cb) return;
+    if (cb.checked) archSel.add(cb.dataset.arch); else archSel.delete(cb.dataset.arch);
+    updArchBar();
+  });
+  const pagerArch = $('#pagerArch');
+  if (pagerArch) pagerArch.addEventListener('click', e => {
+    const b = e.target.closest('[data-archpg]');
+    if (!b || b.disabled) return;
+    const v = b.dataset.archpg;
+    if (v === 'prev') archPage = Math.max(1, archPage - 1);
+    else if (v === 'next') archPage++;
+    else archPage = +v;
+    renderDeletedList();
+  });
+  const archAll = $('#archAll');
+  if (archAll) archAll.addEventListener('change', e => {
+    const ids = archPageIds();
+    if (e.target.checked) ids.forEach(id => archSel.add(id));
+    else ids.forEach(id => archSel.delete(id));
+    renderDeletedList();
+  });
+  const archBatch = $('#archBatchDel');
+  if (archBatch) archBatch.addEventListener('click', () => {
+    if (!archSel.size) return;
+    openConfirm(t('repBatchMsgN').replace('{n}', archSel.size), () => {
+      const set = new Set(archSel);
+      archive = archive.filter(a => !set.has(a.id));
+      archSel.clear();
+      saveArchive(); renderAllViews();
+      showToast(t('repPurged'), '', 'ok');
+    });
+  });
+  const archClear = $('#archClear');
+  if (archClear) archClear.addEventListener('click', () => {
+    if (!archive.length) return;
+    openConfirm(t('repClearAllMsg'), () => {
+      archive = [];
+      archSel.clear();
+      saveArchive(); renderAllViews();
+      showToast(t('repClearAllDone'), '', 'ok');
+    });
   });
   document.querySelectorAll('.overlay').forEach(ov => ov.addEventListener('click', e => { if (e.target === ov) ov.classList.remove('show'); }));
 
@@ -2179,6 +2331,12 @@ function bind(){
     if (tab.dataset.view === 'soon') soonOnly = null;   // 点回“优先处理”恢复全部分组
     gotoView(tab.dataset.view);
     renderSoon();
+    if (tab.dataset.view === 'report'){
+      reportPeriod = 'week';
+      lsSet('ddl-report-per', 'week');
+      renderReport();
+      setTimeout(playReportAnimations, 40);
+    }
   }));
   $('#chips').addEventListener('click', e => {
     const c = e.target.closest('.chip');
@@ -2247,6 +2405,22 @@ function bind(){
     const card = e.target.closest('.card');
     if (!btn || !card) return;
     const id = card.dataset.id;
+    if (btn.dataset.act === 'ontime'){
+      const t = state.tasks.find(x => x.id === id);
+      if (t){
+        t.status = 'done';
+        const due = new Date(t.due).getTime();
+        t.doneAt = Math.max(due - 1000, 1);   // 记为准时：完成时间记为截止前
+      }
+      save();
+      card.classList.add('fading');
+      setTimeout(() => {
+        const first = snapSoon();
+        renderAllViews();
+        flipSoon(first);
+      }, 360);
+      return;
+    }
     if (btn.dataset.act === 'done'){
       const t = state.tasks.find(x => x.id === id);
       if (t){ t.status = 'done'; t.doneAt = Date.now(); }
@@ -2745,13 +2919,33 @@ function updateFeedSyncState(){
 function autoCleanOverdue(){
   if (!account || !account.autoClean) return;
   const cut = Date.now() - (account.cleanDays || 30) * 864e5;
-  const keep = [];
   let changed = false;
   state.tasks.forEach(t => {
-    if (t.status !== 'done' && new Date(t.due).getTime() < cut){ archiveTask(t, 'auto'); changed = true; return; }
-    keep.push(t);
+    if (t.status !== 'done' && new Date(t.due).getTime() < cut){
+      t.status = 'done';
+      const due = new Date(t.due).getTime();
+      t.doneAt = Math.max(due - 1000, 1);   // 完成时间记为 DDL → 归入“准时完成”
+      changed = true;
+    }
   });
-  if (changed){ state.tasks = keep; save(); renderAllViews(); }
+  if (changed){ save(); renderAllViews(); }
+}
+/* 旧版曾把自动清理的任务放进“删除档案”，这里一次性把它们迁移为“已完成任务” */
+function migrateAutoArchive(){
+  const auto = archive.filter(a => a.reason === 'auto');
+  if (!auto.length) return;
+  auto.forEach(a => {
+    const c = state.courses.find(x => x.id === a.courseId) || ensureCourse(a.courseName || '我的任务');
+    const due = a.due ? +a.due : Date.now();
+    state.tasks.push({
+      id: uid(), courseId: c.id, title: a.title || '(未命名)', type: a.type || '',
+      due: new Date(due), hours: a.hours || null, source: a.source || 'manual',
+      status: 'done', notes: '', canvasUid: null, priority: '',
+      originalDue: null, ddlEdited: false, doneAt: Math.max(due - 1000, 1)
+    });
+  });
+  archive = archive.filter(a => a.reason !== 'auto');
+  saveArchive(); save(); refreshCourseOptions();
 }
 
 /* ================= 顶栏实时时钟（跟随设备时区/定位） ================= */
@@ -2967,11 +3161,11 @@ Object.assign(I18N['zh-TW'], { themeAuto:'跟隨系統' });
 Object.assign(I18N['ja'], { themeAuto:'システムに従う' });
 Object.assign(I18N['en'], { themeAuto:'Follow system' });
 Object.assign(I18N['es'], { themeAuto:'Seguir sistema' });
-Object.assign(I18N['zh-CN'], { cfDelMsg:'确认删除这个任务吗？删除后将无法恢复。' });
-Object.assign(I18N['zh-TW'], { cfDelMsg:'確認刪除這個任務嗎？刪除後將無法恢復。' });
-Object.assign(I18N['ja'], { cfDelMsg:'このタスクを削除しますか？削除後は元に戻せません。' });
-Object.assign(I18N['en'], { cfDelMsg:'Delete this task? This cannot be undone.' });
-Object.assign(I18N['es'], { cfDelMsg:'¿Eliminar esta tarea? Esta acción no se puede deshacer.' });
+Object.assign(I18N['zh-CN'], { cfDelMsg:'确认删除这个任务吗？' });
+Object.assign(I18N['zh-TW'], { cfDelMsg:'確認刪除這個任務嗎？' });
+Object.assign(I18N['ja'], { cfDelMsg:'このタスクを削除しますか？' });
+Object.assign(I18N['en'], { cfDelMsg:'Delete this task?' });
+Object.assign(I18N['es'], { cfDelMsg:'¿Eliminar esta tarea?' });
 Object.assign(I18N['zh-CN'], { feedSyncTitle:'⇩ Canvas Feed 自动刷新', feedUrlLabel:'日历 Feed 链接（webcal://…）', refreshFreqLabel:'刷新频率', freq30:'每 30 分钟', freq60:'每 1 小时', freq360:'每 6 小时', freq1440:'每天', autoRefreshOn:'启用定时自动刷新', refreshNow:'立即刷新' });
 Object.assign(I18N['zh-TW'], { feedSyncTitle:'⇩ Canvas Feed 自動刷新', feedUrlLabel:'日曆 Feed 連結（webcal://…）', refreshFreqLabel:'刷新頻率', freq30:'每 30 分鐘', freq60:'每 1 小時', freq360:'每 6 小時', freq1440:'每天', autoRefreshOn:'啟用定時自動刷新', refreshNow:'立即刷新' });
 Object.assign(I18N['ja'], { feedSyncTitle:'⇩ Canvas Feed 自動更新', feedUrlLabel:'カレンダー Feed URL（webcal://…）', refreshFreqLabel:'更新頻度', freq30:'30分ごと', freq60:'1時間ごと', freq360:'6時間ごと', freq1440:'毎日', autoRefreshOn:'定期的に自動更新する', refreshNow:'今すぐ更新' });
@@ -3017,6 +3211,21 @@ Object.assign(I18N['zh-TW'], { updPreviewNote:'網頁預覽：此按鈕僅在桌
 Object.assign(I18N['ja'], { updPreviewNote:'Web プレビュー：実際のダウンロードはデスクトップ版のみです。' });
 Object.assign(I18N['en'], { updPreviewNote:'Web preview: actual download only happens in the desktop app.' });
 Object.assign(I18N['es'], { updPreviewNote:'Vista previa web: la descarga real solo ocurre en la app de escritorio.' });
+Object.assign(I18N['zh-CN'], { btnOntime:'记为准时' });
+Object.assign(I18N['zh-TW'], { btnOntime:'記為準時' });
+Object.assign(I18N['ja'], { btnOntime:'時間通りに記録' });
+Object.assign(I18N['en'], { btnOntime:'On time' });
+Object.assign(I18N['es'], { btnOntime:'A tiempo' });
+Object.assign(I18N['zh-CN'], { repPurge:'彻底删除', repPurgeMsg:'您确定彻底删除此任务吗？此操作无法恢复。', repPurged:'已彻底删除' });
+Object.assign(I18N['zh-TW'], { repPurge:'徹底刪除', repPurgeMsg:'您確定徹底刪除此任務嗎？此操作無法復原。', repPurged:'已徹底刪除' });
+Object.assign(I18N['ja'], { repPurge:'完全削除', repPurgeMsg:'このタスクを完全に削除しますか？元に戻せません。', repPurged:'完全に削除しました' });
+Object.assign(I18N['en'], { repPurge:'Delete forever', repPurgeMsg:'Permanently delete this task? This cannot be undone.', repPurged:'Deleted permanently' });
+Object.assign(I18N['es'], { repPurge:'Eliminar definitivamente', repPurgeMsg:'¿Eliminar esta tarea definitivamente? No se puede deshacer.', repPurged:'Eliminada definitivamente' });
+Object.assign(I18N['zh-CN'], { repSelPage:'全选本页', repBatchDel:'批量删除', repClearAll:'一键删除全部', repBatchMsgN:'确定彻底删除选中的 {n} 条记录吗？此操作无法恢复。', repClearAllMsg:'确定彻底删除全部删除记录吗？此操作无法恢复。', repClearAllDone:'已清空全部删除记录' });
+Object.assign(I18N['zh-TW'], { repSelPage:'全選本頁', repBatchDel:'批次刪除', repClearAll:'一鍵刪除全部', repBatchMsgN:'確定徹底刪除選中的 {n} 筆紀錄嗎？此操作無法復原。', repClearAllMsg:'確定徹底刪除全部刪除紀錄嗎？此操作無法復原。', repClearAllDone:'已清空全部刪除紀錄' });
+Object.assign(I18N['ja'], { repSelPage:'このページをすべて選択', repBatchDel:'一括削除', repClearAll:'すべて完全削除', repBatchMsgN:'選択した {n} 件を完全に削除しますか？元に戻せません。', repClearAllMsg:'削除履歴をすべて完全に削除しますか？元に戻せません。', repClearAllDone:'削除履歴をすべて消去しました' });
+Object.assign(I18N['en'], { repSelPage:'Select this page', repBatchDel:'Delete selected', repClearAll:'Delete all', repBatchMsgN:'Permanently delete the {n} selected records? This cannot be undone.', repClearAllMsg:'Permanently delete all deleted records? This cannot be undone.', repClearAllDone:'All deleted records removed' });
+Object.assign(I18N['es'], { repSelPage:'Seleccionar esta página', repBatchDel:'Eliminar seleccionadas', repClearAll:'Eliminar todas', repBatchMsgN:'¿Eliminar definitivamente los {n} registros seleccionados? No se puede deshacer.', repClearAllMsg:'¿Eliminar definitivamente todos los registros eliminados? No se puede deshacer.', repClearAllDone:'Se eliminaron todos los registros' });
 /* 报告页 */
 Object.assign(I18N['zh-CN'], {
   tabReport:'📊 报告', titleReport:'📊 报告', perAll:'全部', perWeek:'本周', perMonth:'本月', perYear:'本年',
@@ -3119,7 +3328,7 @@ Object.assign(I18N['ja'], { updFound:'新しいバージョンがあります', 
 Object.assign(I18N['en'], { updFound:'Update available', updClick:'Click this notice to update', updInstalling:'Downloading & installing…', updDone:'Installed — please restart the app', updFailed:'Update failed' });
 Object.assign(I18N['es'], { updFound:'Actualización disponible', updClick:'Haz clic en este aviso para actualizar', updInstalling:'Descargando e instalando…', updDone:'Instalado: reinicia la app', updFailed:'Error al actualizar' });
 let LANG = 'zh-CN';
-const APP_VERSION = '1.1.0';
+const APP_VERSION = '1.1.1';
 function t(key){
   const d = I18N[LANG] || I18N['zh-CN'];
   return (d && d[key] !== undefined) ? d[key] : ((I18N['zh-CN'] && I18N['zh-CN'][key] !== undefined) ? I18N['zh-CN'][key] : key);
@@ -3275,6 +3484,7 @@ function applyLang(lang){
 
 /* ================= 启动 ================= */
 initState();
+migrateAutoArchive();
 account = loadAccount();
 applyBg(account.bg || '#f3f5fa', false);
 initClock();
